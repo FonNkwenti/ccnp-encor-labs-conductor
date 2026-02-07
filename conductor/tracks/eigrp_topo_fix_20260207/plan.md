@@ -12,8 +12,8 @@
 - [x] Task: Update/Re-generate `topology.drawio` for Lab 07 (Add R4 OSPF). 60d3099
 - [x] Task: Update/Re-generate `topology.drawio` for Lab 08 (Add R6 VPN). 252aa7f
 - [x] Task: Update/Re-generate `topology.drawio` for Lab 09 (Full Dual-Stack). f4dedd4
-- [~] Task: Export all `.drawio` files to `.png` (200% zoom, transparent).
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md)
+- [x] Task: Export all `.drawio` files to `.png` (200% zoom, transparent). fb40ce1
+- [~] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Documentation Sync
 - [ ] Task: Update lab `README.md` files (if applicable) to link/display the new PNG diagrams.
