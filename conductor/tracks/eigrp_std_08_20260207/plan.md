@@ -1,8 +1,8 @@
 # Implementation Plan: Implement EIGRP Lab 08
 
 ## Phase 1: Lab Design & Topology
-- [~] Task: Review `labs/eigrp/baseline.yaml` for Lab 08 requirements (Added R6).
-- [ ] Task: Design Skynet Global "Secure Branch" scenario for GRE tunnel implementation.
+- [x] Task: Review `labs/eigrp/baseline.yaml` for Lab 08 requirements (Added R6). 3d4764e
+- [~] Task: Design Skynet Global "Secure Branch" scenario for GRE tunnel implementation.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Design' (Protocol in workflow.md)
 
 ## Phase 2: Workbook & Config Implementation
