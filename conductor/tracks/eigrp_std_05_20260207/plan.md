@@ -14,6 +14,6 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md) b645b95
 
 ## Phase 3: Verification & Quality Assurance
-- [ ] Task: Create Verification Cheatsheet in `workbook.md`.
-- [ ] Task: Validate all `show` and `debug` output on IOS c7200/c3725.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Finalization' (Protocol in workflow.md)
+- [x] Task: Create Verification Cheatsheet in `workbook.md`. 9234f41
+- [x] Task: Validate all `show` and `debug` output on IOS c7200/c3725. 9234f41
+- [~] Task: Conductor - User Manual Verification 'Phase 3: Finalization' (Protocol in workflow.md)
