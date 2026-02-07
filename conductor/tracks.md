@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Standardize EIGRP Lab 02: Path Selection**
+- [x] **Track: Standardize EIGRP Lab 02: Path Selection**
   *Link: [./tracks/eigrp_std_02_20260207/](./tracks/eigrp_std_02_20260207/)*
