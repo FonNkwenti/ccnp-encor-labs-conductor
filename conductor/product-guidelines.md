@@ -10,6 +10,7 @@
 
 ## Workbook Structure
 - **Challenge-First Approach:** Workbooks should be structured to present the topology and high-level objectives first, followed by a troubleshooting or implementation scenario. Detailed configuration steps are provided only in the solution section, forcing users to attempt the configuration independently first.
+- **Detailed Physical Context:** Every workbook MUST include a "Cabling & Connectivity Table" in the Hardware Specifications section, detailing exact local/remote interface mappings and associated subnets to ensure accurate GNS3 topology building.
 
 ## Terminology and Conventions
 - **Cisco Official Terminology:** Strictly adhere to official Cisco terminology (e.g., "Administrative Distance", "Feasible Successor", "Metric Weights") to ensure maximum alignment with the CCNP ENCOR exam blueprint.
