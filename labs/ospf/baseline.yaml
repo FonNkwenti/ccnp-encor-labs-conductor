@@ -1,0 +1,214 @@
+# OSPF Chapter Baseline
+# Source of truth for topology, addressing, and lab progression
+
+chapter: OSPF
+version: 1.0
+
+# =============================================================================
+# CORE TOPOLOGY - Present in ALL labs
+# =============================================================================
+core_topology:
+  devices:
+    - name: R1
+      platform: c7200
+      role: Hub/ABR
+      loopback0: 10.1.1.1/32
+      console_port: 6001
+      slots:
+        - slot: 0
+          adapter: C7200-IO-FE
+        - slot: 1
+          adapter: PA-2FE-TX
+        - slot: 3
+          adapter: PA-GE
+
+    - name: R2
+      platform: c3725
+      role: Backbone Router
+      loopback0: 10.2.2.2/32
+      console_port: 6002
+      slots:
+        - slot: 0
+          adapter: GT96100-FE
+
+    - name: R3
+      platform: c3725
+      role: Branch Router
+      loopback0: 10.3.3.3/32
+      console_port: 6003
+      slots:
+        - slot: 0
+          adapter: GT96100-FE
+
+  links:
+    - id: L1
+      source: R1:Fa1/0
+      target: R2:Fa0/0
+      subnet: 10.12.0.0/30
+      description: Backbone Link 1
+      
+    - id: L2
+      source: R2:Fa0/1
+      target: R3:Fa0/0
+      subnet: 10.23.0.0/30
+      description: Branch Link
+      
+    - id: L3
+      source: R1:Fa1/1
+      target: R3:Fa0/1
+      subnet: 10.13.0.0/30
+      description: Backbone Link 2 (Triangle)
+
+# =============================================================================
+# OPTIONAL DEVICES - Added for specific labs
+# =============================================================================
+optional_devices:
+  - name: R4
+    platform: c3725
+    role: NSSA Router
+    loopback0: 10.4.4.4/32
+    console_port: 6004
+    available_from: 6
+    purpose: NSSA area and Type 7 LSA demonstration
+
+  - name: R5
+    platform: c3725
+    role: ASBR/External
+    loopback0: 10.5.5.5/32
+    console_port: 6005
+    available_from: 7
+    purpose: Redistribution and external route testing
+
+  - name: R6
+    platform: c7200
+    role: Dual-Stack Border
+    loopback0: 10.6.6.6/32
+    console_port: 6006
+    available_from: 8
+    purpose: OSPFv3 neighbor adjacencies
+
+  - name: R7
+    platform: c3725
+    role: Stub Router
+    loopback0: 10.7.7.7/32
+    console_port: 6007
+    available_from: 5
+    purpose: Stub and Totally Stubby area testing
+
+optional_links:
+  - id: L4
+    source: R1:Fa0/0
+    target: R4:Fa0/0
+    subnet: 10.14.0.0/30
+    available_from: 6
+    description: ABR to NSSA Area
+    
+  - id: L5
+    source: R2:Fa1/0
+    target: R5:Fa0/0
+    subnet: 10.25.0.0/30
+    available_from: 7
+    description: ASBR to External Domain
+    
+  - id: L6
+    source: R3:Fa1/0
+    target: R7:Fa0/0
+    subnet: 10.37.0.0/30
+    available_from: 5
+    description: Area 1 to Stub Area
+
+# =============================================================================
+# LAB PROGRESSION
+# =============================================================================
+labs:
+  - number: 1
+    title: Basic OSPF Adjacency
+    difficulty: Foundation
+    time_minutes: 45
+    devices: [R1, R2, R3]
+    objectives:
+      - Configure OSPFv2 router processes
+      - Establish Area 0 adjacencies
+      - Verify DR/BDR election
+      
+  - number: 2
+    title: OSPF Network Types
+    difficulty: Foundation
+    time_minutes: 60
+    devices: [R1, R2, R3]
+    extends: 1
+    objectives:
+      - Change OSPF network types (Broadcast/P2P)
+      - Manage DR/BDR elections with priorities
+      - Verify adjacency settling times
+      
+  - number: 3
+    title: Path Selection & Metrics
+    difficulty: Foundation
+    time_minutes: 60
+    devices: [R1, R2, R3]
+    extends: 2
+    objectives:
+      - Modify interface cost
+      - Configure reference bandwidth
+      - Verify OSPF cost calculation
+      
+  - number: 4
+    title: Multi-Area OSPF
+    difficulty: Intermediate
+    time_minutes: 75
+    devices: [R1, R2, R3]
+    extends: 3
+    topology_note: Area 1 introduced on R2-R3 link
+    objectives:
+      - Configure Multi-Area OSPF hierarchy
+      - Identify ABR/ASBR roles
+      - Examine LSA Types 1, 2, and 3
+      
+  - number: 5
+    title: OSPF Special Area Types
+    difficulty: Intermediate
+    time_minutes: 75
+    devices: [R1, R2, R3, R7]
+    extends: 4
+    topology_note: R7 added as a Stub router
+    objectives:
+      - Configure OSPF Stub areas
+      - Implement Totally Stubby Areas
+      - Verify default route injection
+      
+  - number: 6
+    title: NSSA & Route Control
+    difficulty: Intermediate
+    time_minutes: 90
+    devices: [R1, R2, R3, R4]
+    extends: 5
+    topology_note: R4 added as an NSSA router
+    objectives:
+      - Configure Not-So-Stubby Areas (NSSA)
+      - Observe Type 7 to Type 5 translation
+      - Implement inter-area summarization
+      
+  - number: 7
+    title: Authentication & Redistribution
+    difficulty: Advanced
+    time_minutes: 90
+    devices: [R1, R2, R3, R5]
+    extends: 6
+    topology_note: R5 added as ASBR
+    objectives:
+      - Configure MD5/SHA authentication
+      - Redistribute external routes into OSPF
+      - Compare E1 vs E2 metric types
+      
+  - number: 8
+    title: OSPFv3 Integration
+    difficulty: Advanced
+    time_minutes: 120
+    devices: [R1, R2, R3, R6]
+    extends: 7
+    topology_note: R6 added for OSPFv3 stack
+    objectives:
+      - Configure OSPFv3 for IPv4 and IPv6
+      - Verify address family support
+      - Troubleshoot dual-stack adjacencies

@@ -1,0 +1,234 @@
+# EIGRP Chapter Baseline
+# Source of truth for topology, addressing, and lab progression
+
+chapter: EIGRP
+version: 1.0
+eigrp_as: 100
+
+# =============================================================================
+# CORE TOPOLOGY - Present in ALL labs
+# =============================================================================
+core_topology:
+  devices:
+    - name: R1
+      platform: c7200
+      role: Hub Router
+      loopback0: 1.1.1.1/32
+      console_port: 5001
+      slots:
+        - slot: 0
+          adapter: C7200-IO-FE
+        - slot: 1
+          adapter: PA-2FE-TX
+        - slot: 3
+          adapter: PA-GE
+
+    - name: R2
+      platform: c3725
+      role: Branch Router
+      loopback0: 2.2.2.2/32
+      console_port: 5002
+      slots:
+        - slot: 0
+          adapter: GT96100-FE
+
+    - name: R3
+      platform: c3725
+      role: Remote Branch
+      loopback0: 3.3.3.3/32
+      console_port: 5003
+      slots:
+        - slot: 0
+          adapter: GT96100-FE
+
+  links:
+    - id: L1
+      source: R1:Fa1/0
+      target: R2:Fa0/0
+      subnet: 10.0.12.0/30
+      description: Hub to Branch
+
+    - id: L2
+      source: R2:Fa0/1
+      target: R3:Fa0/0
+      subnet: 10.0.23.0/30
+      description: Branch to Remote
+
+# =============================================================================
+# OPTIONAL DEVICES - Added for specific labs
+# =============================================================================
+optional_devices:
+  - name: R4
+    platform: c3725
+    role: OSPF Domain Router
+    loopback0: 4.4.4.4/32
+    console_port: 5004
+    available_from: 7
+    purpose: Redistribution between EIGRP and OSPF
+
+  - name: R5
+    platform: c3725
+    role: Stub Network
+    loopback0: 5.5.5.5/32
+    console_port: 5005
+    available_from: 4
+    purpose: Demonstrates stub routing behavior
+
+  - name: R6
+    platform: c7200
+    role: VPN Tunnel Endpoint
+    loopback0: 6.6.6.6/32
+    console_port: 5006
+    available_from: 8
+    purpose: GRE/IPsec tunnel for EIGRP over WAN
+
+  - name: R7
+    platform: c3725
+    role: Summary Boundary
+    loopback0: 7.7.7.7/32
+    console_port: 5007
+    available_from: 3
+    purpose: Route summarization demonstration
+
+optional_links:
+  - id: L3
+    source: R1:Fa1/1
+    target: R4:Fa0/0
+    subnet: 10.0.14.0/30
+    available_from: 7
+    description: Hub to OSPF domain
+
+  - id: L4
+    source: R3:Fa0/1
+    target: R5:Fa0/0
+    subnet: 10.0.35.0/30
+    available_from: 4
+    description: Remote to Stub network
+
+  - id: L5
+    source: R1:Gi3/0
+    target: R6:Gi3/0
+    subnet: 10.0.16.0/30
+    available_from: 8
+    description: Hub to VPN endpoint
+
+  - id: L6
+    source: R1:Fa0/0
+    target: R7:Fa0/0
+    subnet: 10.0.17.0/30
+    available_from: 3
+    description: Hub to Summary boundary
+
+  - id: L7
+    source: R1:Fa1/1
+    target: R3:Fa0/1
+    subnet: 10.0.13.0/30
+    available_from: 2
+    description: Redundant Backbone Link for Path Selection
+
+# =============================================================================
+# LAB PROGRESSION
+# =============================================================================
+labs:
+  - number: 1
+    title: Basic EIGRP Adjacency
+    difficulty: Foundation
+    time_minutes: 45
+    devices: [R1, R2, R3]
+    objectives:
+      - Configure EIGRP AS and router-id
+      - Verify neighbor discovery
+      - Implement passive interfaces
+
+  - number: 2
+    title: Path Selection & Metrics
+    difficulty: Foundation
+    time_minutes: 60
+    devices: [R1, R2, R3]
+    extends: 1
+    objectives:
+      - Understand DUAL algorithm
+      - Calculate composite metric
+      - Configure variance for load balancing
+
+  - number: 3
+    title: Route Summarization
+    difficulty: Foundation
+    time_minutes: 60
+    devices: [R1, R2, R3, R7]
+    extends: 2
+    topology_note: R7 added as summary boundary router
+    objectives:
+      - Configure manual summarization
+      - Understand query boundaries
+      - Verify summary routes
+
+  - number: 4
+    title: Stub & WAN Optimization
+    difficulty: Intermediate
+    time_minutes: 75
+    devices: [R1, R2, R3, R5]
+    extends: 3
+    topology_note: R5 added as stub network
+    objectives:
+      - Configure EIGRP stub
+      - Adjust WAN bandwidth
+      - Tune hello/hold timers
+
+  - number: 5
+    title: Authentication & Advanced
+    difficulty: Intermediate
+    time_minutes: 75
+    devices: [R1, R2, R3, R5]
+    extends: 4
+    objectives:
+      - Implement MD5/SHA authentication
+      - Configure route tagging
+      - Use offset lists
+
+  - number: 6
+    title: Filtering & Control
+    difficulty: Intermediate
+    time_minutes: 60
+    devices: [R1, R2, R3, R5]
+    extends: 5
+    objectives:
+      - Configure distribute-lists
+      - Apply route-maps
+      - Filter with prefix-lists
+
+  - number: 7
+    title: Redistribution
+    difficulty: Advanced
+    time_minutes: 90
+    devices: [R1, R2, R3, R4, R5]
+    extends: 6
+    topology_note: R4 added as OSPF domain router
+    objectives:
+      - Redistribute between EIGRP and OSPF
+      - Prevent routing loops
+      - Use route tags for control
+
+  - number: 8
+    title: EIGRP over VPN Tunnel
+    difficulty: Advanced
+    time_minutes: 90
+    devices: [R1, R2, R3, R6]
+    extends: 6
+    topology_note: R6 added for GRE tunnel
+    objectives:
+      - Configure GRE tunnel
+      - Run EIGRP over tunnel
+      - Handle split-horizon
+
+  - number: 9
+    title: Dual-Stack Migration
+    difficulty: Advanced
+    time_minutes: 120
+    devices: [R1, R2, R3, R4, R5, R6, R7]
+    extends: 8
+    topology_note: Full topology for final integration
+    objectives:
+      - Configure EIGRP for IPv6
+      - Implement dual-stack
+      - Validate migration strategy

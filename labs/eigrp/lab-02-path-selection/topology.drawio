@@ -1,0 +1,69 @@
+<mxfile host="app.diagrams.net" modified="2026-02-07T14:30:00.000Z" agent="Mozilla/5.0" version="21.0.0" etag="eigrp-lab02-sonnet">
+  <diagram name="EIGRP Lab 02 - Path Selection" id="eigrp-lab02-topology">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Title -->
+        <mxCell id="title" value="EIGRP Lab 02: Path Selection &amp; Metrics&#xa;AS 100 | 3 Routers | Triangle Topology with Redundancy" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="250" y="20" width="320" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- R1 Hub Router -->
+        <mxCell id="r1" value="" style="shape=mxgraph.cisco.routers.router;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="360" y="120" width="78" height="53" as="geometry" />
+        </mxCell>
+        <mxCell id="r1-label" value="R1&#xa;Hub Router&#xa;Lo0: 1.1.1.1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="349" y="180" width="100" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- R2 Branch Router -->
+        <mxCell id="r2" value="" style="shape=mxgraph.cisco.routers.router;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="240" y="320" width="78" height="53" as="geometry" />
+        </mxCell>
+        <mxCell id="r2-label" value="R2&#xa;Branch Router&#xa;Lo0: 2.2.2.2" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="229" y="380" width="100" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- R3 Remote Branch -->
+        <mxCell id="r3" value="" style="shape=mxgraph.cisco.routers.router;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;sketch=0;" vertex="1" parent="1">
+          <mxGeometry x="480" y="320" width="78" height="53" as="geometry" />
+        </mxCell>
+        <mxCell id="r3-label" value="R3&#xa;Remote Branch&#xa;Lo0: 3.3.3.3" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="469" y="380" width="100" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Link R1-R2 (Existing) -->
+        <mxCell id="link-r1-r2" value="" style="endArrow=none;html=1;strokeWidth=3;strokeColor=#00CC00;" edge="1" parent="1" source="r1" target="r2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-r1-r2-label" value="L1: Fa1/0 ↔ Fa0/0&#xa;10.0.12.0/30" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="220" y="200" width="100" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Link R2-R3 (Existing) -->
+        <mxCell id="link-r2-r3" value="" style="endArrow=none;html=1;strokeWidth=3;strokeColor=#00CC00;" edge="1" parent="1" source="r2" target="r3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-r2-r3-label" value="L2: Fa0/1 ↔ Fa0/0&#xa;10.0.23.0/30" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="349" y="340" width="100" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Link R1-R3 (NEW - Redundant) -->
+        <mxCell id="link-r1-r3" value="" style="endArrow=none;html=1;strokeWidth=3;strokeColor=#FF6600;dashed=1;" edge="1" parent="1" source="r1" target="r3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-r1-r3-label" value="L7 (NEW): Fa1/1 ↔ Fa0/1&#xa;10.0.13.0/30&#xa;Delay: 5000" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#FF6600;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="480" y="200" width="140" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Annotation: Variance -->
+        <mxCell id="annotation-variance" value="Variance 2&#xa;Unequal-Cost&#xa;Load Balancing" style="shape=note;whiteSpace=wrap;html=1;size=14;verticalAlign=top;align=left;spacingTop=-6;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="140" y="120" width="100" height="60" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

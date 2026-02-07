@@ -1,0 +1,49 @@
+<mxfile host="65bd71144e">
+    <diagram name="EIGRP Lab 01 - Basic Adjacency" id="eigrp-lab01-topology">
+        <mxGraphModel dx="671" dy="622" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="r1" value="" style="shape=mxgraph.cisco.routers.router;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;sketch=0;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="100" width="78" height="53" as="geometry"/>
+                </mxCell>
+                <mxCell id="r1-label" value="R1&#10;Hub Router&#10;Lo0: 1.1.1.1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="270" y="103" width="100" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r2" value="" style="shape=mxgraph.cisco.routers.router;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;sketch=0;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="280" width="78" height="53" as="geometry"/>
+                </mxCell>
+                <mxCell id="r2-label" value="R2&#10;Branch Router&#10;Lo0: 2.2.2.2" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="249" y="283" width="100" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r3" value="" style="shape=mxgraph.cisco.routers.router;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;sketch=0;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="460" width="78" height="53" as="geometry"/>
+                </mxCell>
+                <mxCell id="r3-label" value="R3&#10;Remote Branch&#10;Lo0: 3.3.3.3" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="260" y="463" width="100" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="link-r1-r2" value="" style="endArrow=none;html=1;strokeWidth=3;strokeColor=#00CC00;" parent="1" source="r1" target="r2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="link-r1-r2-label-r1" value="Fa1/0&#10;10.0.12.1/30" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="170" width="80" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="link-r1-r2-label-r2" value="Fa0/0&#10;10.0.12.2/30" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="240" width="80" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="link-r2-r3" value="" style="endArrow=none;html=1;strokeWidth=3;strokeColor=#00CC00;" parent="1" source="r2" target="r3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="link-r2-r3-label-r2" value="Fa0/1&#10;10.0.23.1/30" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="350" width="80" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="link-r2-r3-label-r3" value="Fa0/0&#10;10.0.23.2/30" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="420" width="80" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="title" value="EIGRP Lab 01: Basic Adjacency&#10;AS 100 | 3 Routers | Linear Topology" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="299" y="20" width="200" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
