@@ -1,12 +1,12 @@
 # Implementation Plan: Standardize EIGRP Lab 01
 
-## Phase 1: Analysis & Preparation
+## Phase 1: Analysis & Preparation [checkpoint: d0c1c15]
 - [x] Task: Audit existing `workbook.md` in `labs/eigrp/lab-01-basic-adjacency/`.
 - [x] Task: Extract solution-specific configuration to be moved to the solution section.
-- [~] Task: Conductor - User Manual Verification 'Phase 1: Preparation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Preparation' (Protocol in workflow.md)
 
 ## Phase 2: Refactoring
-- [ ] Task: Restructure `workbook.md` to "Challenge-First" format.
+- [~] Task: Restructure `workbook.md` to "Challenge-First" format.
 - [ ] Task: Update narrative to match "Scenario-Based" guidelines.
 - [ ] Task: Ensure all terminology matches Cisco Official Standards.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Refactoring' (Protocol in workflow.md)
