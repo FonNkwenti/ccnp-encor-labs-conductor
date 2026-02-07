@@ -7,8 +7,8 @@
 
 ## Phase 2: Workbook & Config Implementation
 - [x] Task: Initialize lab directory `labs/ospf/lab-01-*/`. 01312ee
-- [~] Task: Create `topology.drawio` with active devices.
-- [ ] Task: Generate `initial-configs/`.
+- [x] Task: Create `topology.drawio` with active devices. d2444c4
+- [~] Task: Generate `initial-configs/`.
 - [ ] Task: Draft `workbook.md` following "Challenge-First" format.
 - [ ] Task: Implement full `solutions/` configurations.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md)
