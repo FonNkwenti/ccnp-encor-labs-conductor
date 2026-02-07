@@ -8,8 +8,8 @@
 ## Phase 2: Diagram Generation & Export
 - [x] Task: Update/Re-generate `topology.drawio` for Lab 04. 311dca4
 - [x] Task: Update/Re-generate `topology.drawio` for Lab 05. d965d60
-- [~] Task: Update/Re-generate `topology.drawio` for Lab 06.
-- [ ] Task: Update/Re-generate `topology.drawio` for Lab 07 (Add R4 OSPF).
+- [x] Task: Update/Re-generate `topology.drawio` for Lab 06. be8aad5
+- [~] Task: Update/Re-generate `topology.drawio` for Lab 07 (Add R4 OSPF).
 - [ ] Task: Update/Re-generate `topology.drawio` for Lab 08 (Add R6 VPN).
 - [ ] Task: Update/Re-generate `topology.drawio` for Lab 09 (Full Dual-Stack).
 - [ ] Task: Export all `.drawio` files to `.png` (200% zoom, transparent).
