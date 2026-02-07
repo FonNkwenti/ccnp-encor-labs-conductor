@@ -6,8 +6,8 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Design' (Protocol in workflow.md) 3d4764e
 
 ## Phase 2: Workbook & Config Implementation
-- [~] Task: Initialize lab directory `labs/eigrp/lab-08-eigrp-over-vpn/`.
-- [ ] Task: Create `topology.drawio` with active devices.
+- [x] Task: Initialize lab directory `labs/eigrp/lab-08-eigrp-over-vpn/`. ec50437
+- [~] Task: Create `topology.drawio` with active devices.
 - [ ] Task: Generate `initial-configs/` from Lab 07 solutions.
 - [ ] Task: Draft `workbook.md` following "Challenge-First" format.
 - [ ] Task: Implement full `solutions/` configurations.
