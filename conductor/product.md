@@ -18,7 +18,7 @@ A comprehensive set of hands-on labs for the Cisco CCNP ENCOR (350-401) exam.
 - **Traffic Engineering & Filtering:** Deploy advanced route control mechanisms using prefix-lists, distribute-lists, and route-maps to optimize routing table size and enforce enterprise connectivity policies.
 
 ## Scope of Coverage
-- **Core Routing & Switching:** In-depth coverage of EIGRP, OSPF, BGP, STP, and EtherChannel configuration and optimization.
+- **Core Routing & Switching:** In-depth coverage of EIGRP, OSPF, BGP, STP, and EtherChannel, including complex mutual redistribution and multi-protocol integration scenarios.
 - **IP Services & Security:** Comprehensive labs for NAT, FHRP, AAA, ACLs, and VPN technologies.
 
 ## Learning Path
