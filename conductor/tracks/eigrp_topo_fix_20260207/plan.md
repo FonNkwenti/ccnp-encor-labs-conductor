@@ -1,9 +1,9 @@
 # Implementation Plan: Fix EIGRP Lab Topology Diagrams (04-09)
 
-## Phase 1: Audit & Baseline Verification
+## Phase 1: Audit & Baseline Verification [checkpoint: 9d4515a]
 - [x] Task: Compare `labs/eigrp/baseline.yaml` with each workbook to define the precise logical topology for each lab. 0ac6c18
 - [x] Task: Create a checklist of required elements (routers, interfaces, subnets) for each diagram. 0ac6c18
-- [~] Task: Conductor - User Manual Verification 'Phase 1: Audit' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Audit' (Protocol in workflow.md) 0ac6c18
 
 ## Phase 2: Diagram Generation & Export
 - [ ] Task: Update/Re-generate `topology.drawio` for Lab 04.
