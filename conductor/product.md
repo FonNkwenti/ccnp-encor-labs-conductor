@@ -14,6 +14,7 @@ A comprehensive set of hands-on labs for the Cisco CCNP ENCOR (350-401) exam.
 ## Key Features
 - **Verification Cheatsheets:** Provide concise "cheat sheets" for every lab to help users quickly validate their configurations using industry-standard `show` and `debug` commands.
 - **Standardized Topology Diagrams:** High-quality, Cisco-compliant network diagrams for every lab, provided in both editable (Draw.io) and visual (PNG) formats to enhance the learning experience.
+- **Multi-Protocol Optimization:** Advanced configuration and tuning for both EIGRP and OSPF, including network type optimization, deterministic path selection, and protocol-specific security.
 - **Troubleshooting Scenarios:** Integrate specific troubleshooting "tickets" within each chapter to simulate real-world issues and exam-style "find the fault" challenges.
 - **Routing Security Standards:** Implement industry-standard authentication (MD5, HMAC-SHA-256) and traffic engineering techniques to ensure secure and optimized path selection.
 - **Traffic Engineering & Filtering:** Deploy advanced route control mechanisms using prefix-lists, distribute-lists, and route-maps to optimize routing table size and enforce enterprise connectivity policies.
