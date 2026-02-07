@@ -1,9 +1,9 @@
 # Implementation Plan: Implement EIGRP Lab 07
 
-## Phase 1: Lab Design & Topology
+## Phase 1: Lab Design & Topology [checkpoint: b78744b]
 - [x] Task: Review `labs/eigrp/baseline.yaml` for Lab 07 requirements (Added R4). a0f4beb
 - [x] Task: Design Skynet Global "Merger & Acquisition" scenario for OSPF/EIGRP redistribution. 2410a53
-- [~] Task: Conductor - User Manual Verification 'Phase 1: Design' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Design' (Protocol in workflow.md) a0f4beb
 
 ## Phase 2: Workbook & Config Implementation
 - [ ] Task: Initialize lab directory `labs/eigrp/lab-07-redistribution/`.
