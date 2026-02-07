@@ -46,7 +46,7 @@
 ```
 
 ### Scenario Narrative
-As the Lead Network Architect for **Antigravity Global**, you have been tasked with establishing a new routing domain between the Headquarters (R1), the regional Branch Office (R2), and a newly acquired Remote Site (R3). 
+As the Lead Network Architect for **Skynet Global**, you have been tasked with establishing a new routing domain between the Headquarters (R1), the regional Branch Office (R2), and a newly acquired Remote Site (R3). 
 
 The company has standardized on **EIGRP Autonomous System 100**. Your mission is to ensure stable neighbor adjacencies across the point-to-point FastEthernet links while adhering to security best practices by suppressing routing updates on non-essential interfaces. The business depends on full reachability between all Loopback interfaces for management and monitoring.
 
