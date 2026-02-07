@@ -29,7 +29,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Implement EIGRP Lab 08: EIGRP over VPN Tunnel**
+- [~] **Track: Implement EIGRP Lab 08: EIGRP over VPN Tunnel**
   *Link: [./tracks/eigrp_std_08_20260207/](./tracks/eigrp_std_08_20260207/)*
 
 ---
