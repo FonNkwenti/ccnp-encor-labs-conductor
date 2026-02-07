@@ -9,8 +9,8 @@
 - [x] Task: Initialize lab directory `labs/eigrp/lab-06-filtering-control/`. 2c6e322
 - [x] Task: Create `topology.drawio` with active devices. 8b8b431
 - [x] Task: Generate `initial-configs/` from Lab 05 solutions. d3ba8c0
-- [~] Task: Draft `workbook.md` following "Challenge-First" format.
-- [ ] Task: Implement full `solutions/` configurations.
+- [x] Task: Draft `workbook.md` following "Challenge-First" format. 4352b7c
+- [~] Task: Implement full `solutions/` configurations.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Verification & Quality Assurance
