@@ -5,13 +5,13 @@
 - [x] Task: Design Skynet Global "Merger & Acquisition" scenario for OSPF/EIGRP redistribution. 2410a53
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Design' (Protocol in workflow.md) a0f4beb
 
-## Phase 2: Workbook & Config Implementation
+## Phase 2: Workbook & Config Implementation [checkpoint: 58f08cf]
 - [x] Task: Initialize lab directory `labs/eigrp/lab-07-redistribution/`. a57a59e
 - [x] Task: Create `topology.drawio` with active devices. 579c21e
 - [x] Task: Generate `initial-configs/` from Lab 06 solutions. 102f34b
 - [x] Task: Draft `workbook.md` following "Challenge-First" format. bec5c45
 - [x] Task: Implement full `solutions/` configurations. 8b5fc53
-- [~] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md) a0f4beb
 
 ## Phase 3: Verification & Quality Assurance
 - [ ] Task: Create Verification Cheatsheet in `workbook.md`.
