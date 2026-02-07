@@ -19,7 +19,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Implement EIGRP Lab 06: Filtering & Control**
+- [~] **Track: Implement EIGRP Lab 06: Filtering & Control**
   *Link: [./tracks/eigrp_std_06_20260207/](./tracks/eigrp_std_06_20260207/)*
 
 ---
