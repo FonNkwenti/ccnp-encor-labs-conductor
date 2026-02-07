@@ -34,7 +34,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Implement EIGRP Lab 09: Dual-Stack Migration**
+- [x] **Track: Implement EIGRP Lab 09: Dual-Stack Migration**
   *Link: [./tracks/eigrp_std_09_20260207/](./tracks/eigrp_std_09_20260207/)*
 
 ---
