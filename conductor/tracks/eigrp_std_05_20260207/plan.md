@@ -7,8 +7,8 @@
 
 ## Phase 2: Workbook & Config Implementation
 - [x] Task: Initialize lab directory `labs/eigrp/lab-05-authentication-advanced/`. b36fb96
-- [~] Task: Create `topology.drawio` with active devices.
-- [ ] Task: Generate `initial-configs/` from Lab 04 solutions.
+- [x] Task: Create `topology.drawio` with active devices. ad886f4
+- [~] Task: Generate `initial-configs/` from Lab 04 solutions.
 - [ ] Task: Draft `workbook.md` following "Challenge-First" format.
 - [ ] Task: Implement full `solutions/` configurations.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md)
