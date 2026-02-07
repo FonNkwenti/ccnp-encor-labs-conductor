@@ -24,7 +24,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Implement EIGRP Lab 07: Redistribution**
+- [~] **Track: Implement EIGRP Lab 07: Redistribution**
   *Link: [./tracks/eigrp_std_07_20260207/](./tracks/eigrp_std_07_20260207/)*
 
 ---
