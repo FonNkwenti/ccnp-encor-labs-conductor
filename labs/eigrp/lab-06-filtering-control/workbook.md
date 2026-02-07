@@ -192,6 +192,15 @@ router eigrp 100
  distribute-list route-map RM_FILTER_R3 out FastEthernet0/1
 ```
 
+### Objective 3: Access-List Filtering (R3)
+```bash
+access-list 66 deny 10.0.0.0 0.255.255.255
+access-list 66 permit any
+!
+router eigrp 100
+ distribute-list 66 out FastEthernet0/1
+```
+
 ---
 
 ## 10. Lab Completion Checklist
