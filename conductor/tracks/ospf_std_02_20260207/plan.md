@@ -9,8 +9,8 @@
 - [x] Task: Initialize lab directory `labs/ospf/lab-02-*/`. f8df5d6
 - [x] Task: Create `topology.drawio` with active devices. 526288b
 - [x] Task: Generate `initial-configs/` from Lab 01 solutions. 98fe9b8
-- [~] Task: Draft `workbook.md` following "Challenge-First" format.
-- [ ] Task: Implement full `solutions/` configurations.
+- [x] Task: Draft `workbook.md` following "Challenge-First" format. c0aa94c
+- [~] Task: Implement full `solutions/` configurations.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Verification & Quality Assurance
