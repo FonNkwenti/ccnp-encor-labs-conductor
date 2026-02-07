@@ -1,9 +1,9 @@
 # Implementation Plan: Implement EIGRP Lab 05
 
-## Phase 1: Lab Design & Topology
+## Phase 1: Lab Design & Topology [checkpoint: 1393afd]
 - [x] Task: Review `labs/eigrp/baseline.yaml` for Lab 05 requirements (R1, R2, R3, R5). b645b95
 - [x] Task: Design Skynet Global "Security Hardening" scenario for EIGRP authentication. b645b95
-- [~] Task: Conductor - User Manual Verification 'Phase 1: Design' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Design' (Protocol in workflow.md) b645b95
 
 ## Phase 2: Workbook & Config Implementation
 - [ ] Task: Initialize lab directory `labs/eigrp/lab-05-authentication-advanced/`.
