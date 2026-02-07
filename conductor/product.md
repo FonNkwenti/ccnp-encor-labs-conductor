@@ -16,6 +16,7 @@ A comprehensive set of hands-on labs for the Cisco CCNP ENCOR (350-401) exam.
 - **Troubleshooting Scenarios:** Integrate specific troubleshooting "tickets" within each chapter to simulate real-world issues and exam-style "find the fault" challenges.
 - **Routing Security Standards:** Implement industry-standard authentication (MD5, HMAC-SHA-256) and traffic engineering techniques to ensure secure and optimized path selection.
 - **Traffic Engineering & Filtering:** Deploy advanced route control mechanisms using prefix-lists, distribute-lists, and route-maps to optimize routing table size and enforce enterprise connectivity policies.
+- **Dual-Stack IPv4/IPv6 Mastery:** Comprehensive implementation of multi-address family routing using EIGRP Named Mode, providing a seamless transition path to next-generation network standards.
 
 ## Scope of Coverage
 - **Core Routing & Switching:** In-depth coverage of EIGRP, OSPF, BGP, STP, and EtherChannel, including complex mutual redistribution and multi-protocol integration scenarios.
