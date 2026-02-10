@@ -5,16 +5,22 @@ class TestLab04Structure(unittest.TestCase):
     def test_files_exist(self):
         base_path = "labs/eigrp/lab-04-stub-wan-opt"
         self.assertTrue(os.path.exists(os.path.join(base_path, "challenges.md")))
-        self.assertTrue(os.path.exists(os.path.join(base_path, "scripts/fault_injector.py")))
+        self.assertTrue(os.path.exists(os.path.join(base_path, "scripts/refresh_lab.py")))
+        self.assertTrue(os.path.exists(os.path.join(base_path, "scripts/fault_inject_1.py")))
+        self.assertTrue(os.path.exists(os.path.join(base_path, "scripts/fault_inject_2.py")))
+        self.assertTrue(os.path.exists(os.path.join(base_path, "scripts/fault_inject_3.py")))
 
-    def test_injector_syntax(self):
-        script_path = "labs/eigrp/lab-04-stub-wan-opt/scripts/fault_injector.py"
-        if os.path.exists(script_path):
+    def test_scripts_syntax(self):
+        scripts = [
+            "labs/eigrp/lab-04-stub-wan-opt/scripts/refresh_lab.py",
+            "labs/eigrp/lab-04-stub-wan-opt/scripts/fault_inject_1.py",
+            "labs/eigrp/lab-04-stub-wan-opt/scripts/fault_inject_2.py",
+            "labs/eigrp/lab-04-stub-wan-opt/scripts/fault_inject_3.py"
+        ]
+        for script_path in scripts:
             with open(script_path, "r") as f:
                 source = f.read()
                 compile(source, script_path, "exec")
-        else:
-            self.fail("fault_injector.py does not exist yet")
 
 if __name__ == "__main__":
     unittest.main()
