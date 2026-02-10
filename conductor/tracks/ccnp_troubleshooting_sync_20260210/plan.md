@@ -9,7 +9,7 @@
 - [x] Task: Update EIGRP Lab 05 (Authentication & Advanced): Create `challenges.md` and `scripts/fault_injector.py` 84bbf24
 - [x] Task: Update EIGRP Lab 06 (Filtering & Control): Create `challenges.md` and `scripts/fault_injector.py` 6e147a5
 - [x] Task: Update EIGRP Lab 07 (Redistribution): Create `challenges.md` and `scripts/fault_injector.py` 963cbbb
-- [ ] Task: Update EIGRP Lab 08 (EIGRP over VPN): Create `challenges.md` and `scripts/fault_injector.py`
+- [x] Task: Update EIGRP Lab 08 (EIGRP over VPN): Create `challenges.md` and `scripts/fault_injector.py` 8651262
 - [ ] Task: Update EIGRP Lab 09 (Dual-Stack Migration): Create `challenges.md` and `scripts/fault_injector.py`
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: EIGRP Sync' (Protocol in workflow.md)
 
