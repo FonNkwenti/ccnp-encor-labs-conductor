@@ -6,7 +6,7 @@
 - [x] Task: Update EIGRP Lab 02 (Path Selection): Create `challenges.md` and `scripts/fault_injector.py` 4f6eb86
 - [x] Task: Update EIGRP Lab 03 (Route Summarization): Create `challenges.md` and `scripts/fault_injector.py` 3f6a157
 - [x] Task: Update EIGRP Lab 04 (Stub & WAN Optimization): Create `challenges.md` and `scripts/fault_injector.py` 624dde8
-- [ ] Task: Update EIGRP Lab 05 (Authentication & Advanced): Create `challenges.md` and `scripts/fault_injector.py`
+- [x] Task: Update EIGRP Lab 05 (Authentication & Advanced): Create `challenges.md` and `scripts/fault_injector.py` 84bbf24
 - [ ] Task: Update EIGRP Lab 06 (Filtering & Control): Create `challenges.md` and `scripts/fault_injector.py`
 - [ ] Task: Update EIGRP Lab 07 (Redistribution): Create `challenges.md` and `scripts/fault_injector.py`
 - [ ] Task: Update EIGRP Lab 08 (EIGRP over VPN): Create `challenges.md` and `scripts/fault_injector.py`
