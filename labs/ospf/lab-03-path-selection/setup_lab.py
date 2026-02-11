@@ -11,26 +11,20 @@ class LabSetup:
         print(f"Connecting to {host}:{port}...")
         try:
             tn = telnetlib.Telnet(host, port, timeout=5)
-            tn.write(b"
-")
+            tn.write(b"\n")
             time.sleep(1)
-            tn.write(b"enable
-")
-            tn.write(b"configure terminal
-")
+            tn.write(b"enable\n")
+            tn.write(b"configure terminal\n")
             if not os.path.exists(config_file):
                 print(f"  Error: Config file {config_file} not found.")
                 return False
             with open(config_file, 'r') as f:
                 for line in f:
                     if line.strip() and not line.startswith('!'):
-                        tn.write(line.encode('ascii') + b"
-")
+                        tn.write(line.encode('ascii') + b"\n")
                         time.sleep(0.1)
-            tn.write(b"end
-")
-            tn.write(b"write memory
-")
+            tn.write(b"end\n")
+            tn.write(b"write memory\n")
             print(f"  Successfully loaded {config_file}")
             tn.close()
             return True

@@ -47,5 +47,5 @@ class LabSetup:
         print("Lab Setup Complete.")
 
 if __name__ == "__main__":
-    devices = [("R1", 6001, "initial-configs/R1.cfg"), ("R2", 6002, "initial-configs/R2.cfg"), ("R3", 6003, "initial-configs/R3.cfg")]
+    devices = [("R1", 5001, "initial-configs/R1.cfg"), ("R2", 5002, "initial-configs/R2.cfg"), ("R3", 5003, "initial-configs/R3.cfg")]
     LabSetup(devices).run()

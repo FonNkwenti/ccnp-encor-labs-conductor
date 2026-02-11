@@ -13,7 +13,7 @@ core_topology:
       platform: c7200
       role: Hub/ABR
       loopback0: 10.1.1.1/32
-      console_port: 6001
+      console_port: 5001
       slots:
         - slot: 0
           adapter: C7200-IO-FE
@@ -26,7 +26,7 @@ core_topology:
       platform: c3725
       role: Backbone Router
       loopback0: 10.2.2.2/32
-      console_port: 6002
+      console_port: 5002
       slots:
         - slot: 0
           adapter: GT96100-FE
@@ -35,7 +35,7 @@ core_topology:
       platform: c3725
       role: Branch Router
       loopback0: 10.3.3.3/32
-      console_port: 6003
+      console_port: 5003
       slots:
         - slot: 0
           adapter: GT96100-FE
@@ -67,7 +67,7 @@ optional_devices:
     platform: c3725
     role: NSSA Router
     loopback0: 10.4.4.4/32
-    console_port: 6004
+    console_port: 5004
     available_from: 6
     purpose: NSSA area and Type 7 LSA demonstration
 
@@ -75,7 +75,7 @@ optional_devices:
     platform: c3725
     role: ASBR/External
     loopback0: 10.5.5.5/32
-    console_port: 6005
+    console_port: 5005
     available_from: 7
     purpose: Redistribution and external route testing
 
@@ -83,7 +83,7 @@ optional_devices:
     platform: c7200
     role: Dual-Stack Border
     loopback0: 10.6.6.6/32
-    console_port: 6006
+    console_port: 5006
     available_from: 8
     purpose: OSPFv3 neighbor adjacencies
 
@@ -91,7 +91,7 @@ optional_devices:
     platform: c3725
     role: Stub Router
     loopback0: 10.7.7.7/32
-    console_port: 6007
+    console_port: 5007
     available_from: 5
     purpose: Stub and Totally Stubby area testing
 

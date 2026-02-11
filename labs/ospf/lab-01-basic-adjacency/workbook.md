@@ -61,12 +61,26 @@ Your mission is to deploy **OSPFv2** as the internal gateway protocol (IGP) for 
 
 ## 3. Hardware & Environment Specifications
 
-### Router Platform Table
+### 3.1 Router Platform Table
 | Device | Model | RAM | Image Name |
 |--------|-------|-----|------------|
 | R1 | c7200 | 512 MB | `c7200-adventerprisek9-mz.153-3.XB12.image` |
 | R2 | c3725 | 256 MB | `c3725-adventerprisek9-mz.124-15.T14.image` |
 | R3 | c3725 | 256 MB | `c3725-adventerprisek9-mz.124-15.T14.image` |
+
+### 3.2 Cabling & Connectivity Table
+| Local Device | Local Interface | Remote Device | Remote Interface | Subnet |
+|--------------|-----------------|---------------|------------------|--------|
+| R1           | Fa1/0           | R2            | Fa0/0            | 10.12.0.0/30 |
+| R2           | Fa0/1           | R3            | Fa0/0            | 10.23.0.0/30 |
+| R1           | Fa1/1           | R3            | Fa0/1            | 10.13.0.0/30 |
+
+### 3.3 Console Access Table
+| Device | Port | Connection Command |
+|--------|------|--------------------|
+| R1 | 5001 | `telnet 127.0.0.1 5001` |
+| R2 | 5002 | `telnet 127.0.0.1 5002` |
+| R3 | 5003 | `telnet 127.0.0.1 5003` |
 
 ---
 

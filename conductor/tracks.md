@@ -64,7 +64,12 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Implement OSPF Lab 03: Path Selection & Metrics**
+- [~] **Track: Troubleshooting & Fault-Injection Synchronization (EIGRP & OSPF)**
+  *Link: [./tracks/ccnp_troubleshooting_sync_20260210/](./tracks/ccnp_troubleshooting_sync_20260210/)*
+
+---
+
+- [x] **Track: Implement OSPF Lab 03: Path Selection & Metrics**
   *Link: [./tracks/ospf_std_03_20260207/](./tracks/ospf_std_03_20260207/)*
 
 ---
