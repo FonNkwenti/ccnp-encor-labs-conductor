@@ -18,8 +18,9 @@ class LabRefresher:
             tn.connect((host, port))
             tn.sendall(b"\r\n")
             time.sleep(0.5)
-            tn.sendall(b"enable\n")
-            tn.sendall(b"configure terminal\n")
+            tn.sendall(b"enable\r\n")
+            time.sleep(0.3)
+            tn.sendall(b"configure terminal\r\n")
 
             with open(config_file, 'r') as f:
                 for line in f:
@@ -27,8 +28,8 @@ class LabRefresher:
                         tn.sendall(line.encode('ascii') + b"\r\n")
                         time.sleep(0.1)
 
-            tn.sendall(b"end\n")
-            tn.sendall(b"write memory\n")
+            tn.sendall(b"end\r\n")
+            tn.sendall(b"write memory\r\n")
             tn.close()
             print(f"  Successfully refreshed.")
             return True
@@ -43,10 +44,10 @@ class LabRefresher:
 
 if __name__ == "__main__":
     devices = [
-        ("R1", 5001, "solutions/R1.cfg"),
-        ("R2", 5002, "solutions/R2.cfg"),
-        ("R3", 5003, "solutions/R3.cfg")
+        ("R1", 5001, "initial-configs/R1.cfg"),
+        ("R2", 5002, "initial-configs/R2.cfg"),
+        ("R3", 5003, "initial-configs/R3.cfg")
     ]
     refresher = LabRefresher(devices)
     refresher.run()
-    print("\nLab 03 has been refreshed to the 'Solution' state.")
+    print("\nOSPF Lab 03 has been refreshed to the initial config state.")
