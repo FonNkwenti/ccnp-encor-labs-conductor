@@ -4,6 +4,26 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
+- [x] **Track: Draw.io Visual Style Guide & Diagram Remediation**
+  *Link: [./tracks/drawio_style_guide_20260211/](./tracks/drawio_style_guide_20260211/)*
+
+---
+
+- [x] **Track: Draw.io Layout Fix — Bypass Link Overlap Avoidance**
+  *Link: [./tracks/drawio_layout_fix_20260211/](./tracks/drawio_layout_fix_20260211/)*
+
+---
+
+- [x] **Track: Draw.io Tunnel Overlay Line Styles**
+  *Link: [./tracks/drawio_tunnel_overlays_20260211/](./tracks/drawio_tunnel_overlays_20260211/)*
+
+---
+
+- [x] **Track: Draw.io Smart Label Placement & Tunnel Endpoint Octets**
+  *Link: [./tracks/drawio_label_placement_20260212/](./tracks/drawio_label_placement_20260212/)*
+
+---
+
 - [x] **Track: Standardize EIGRP Lab 02: Path Selection**
   *Link: [./tracks/eigrp_std_02_20260207/](./tracks/eigrp_std_02_20260207/)*
 
