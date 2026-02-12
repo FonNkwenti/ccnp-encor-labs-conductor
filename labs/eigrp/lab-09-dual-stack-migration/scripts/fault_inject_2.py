@@ -6,7 +6,6 @@ from fault_utils import FaultInjector
 
 def inject():
     """AS Number Mismatch for IPv6 AF on R2"""
-    print("Injecting Challenge 2: IPv6 AF AS Mismatch...")
     commands = [
         "router eigrp SKYNET_CORE",
         " no address-family ipv6 autonomous-system 100",
@@ -15,8 +14,9 @@ def inject():
         "  exit-af-topology"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5002, commands, "R2 IPv6 AS 666")
-    print("\nChallenge 2 injected successfully.")
+    injector.execute_commands(5002, commands, "Challenge 2")
+    print("\nChallenge 2 fault injected successfully.")
+    print("Refer to challenges.md for the symptom and goal.")
 
 if __name__ == "__main__":
     inject()

@@ -6,14 +6,14 @@ from fault_utils import FaultInjector
 
 def inject():
     """Destination Unreachable (Physical Link Down) on R1"""
-    print("Injecting Challenge 3: Destination Unreachable...")
     commands = [
         "interface GigabitEthernet3/0",
         " shutdown"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5001, commands, "R1 Gi3/0 Shutdown")
-    print("\nChallenge 3 injected successfully.")
+    injector.execute_commands(5001, commands, "Challenge 3")
+    print("\nChallenge 3 fault injected successfully.")
+    print("Refer to challenges.md for the symptom and goal.")
 
 if __name__ == "__main__":
     inject()

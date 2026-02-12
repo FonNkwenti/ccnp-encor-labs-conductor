@@ -6,13 +6,13 @@ from fault_utils import FaultInjector
 
 def inject():
     """Disable IPv6 Unicast Routing on R2"""
-    print("Injecting Challenge 1: Disable IPv6 Unicast Routing...")
     commands = [
         "no ipv6 unicast-routing"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5002, commands, "R2 IPv6 Unicast Disabled")
-    print("\nChallenge 1 injected successfully.")
+    injector.execute_commands(5002, commands, "Challenge 1")
+    print("\nChallenge 1 fault injected successfully.")
+    print("Refer to challenges.md for the symptom and goal.")
 
 if __name__ == "__main__":
     inject()

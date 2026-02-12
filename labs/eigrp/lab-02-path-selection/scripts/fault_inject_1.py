@@ -6,14 +6,14 @@ from fault_utils import FaultInjector
 
 def inject():
     """Feasibility Condition Failure"""
-    print("Injecting Challenge 1: Feasibility Condition Failure...")
     commands = [
         "interface Loopback0",
         " delay 20000"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5003, commands, "R3 Loopback Delay (Feasibility)")
-    print("\nChallenge 1 injected successfully.")
+    injector.execute_commands(5003, commands, "Challenge 1")
+    print("\nChallenge 1 fault injected successfully.")
+    print("Refer to challenges.md for the symptom and goal.")
 
 if __name__ == "__main__":
     inject()

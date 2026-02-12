@@ -6,15 +6,15 @@ from fault_utils import FaultInjector
 
 def inject():
     """Route Map Tagging Removal on R3"""
-    print("Injecting Challenge 3: Tagging Removal...")
     commands = [
         "router eigrp 100",
         " no redistribute connected route-map TAG_R5",
         " redistribute connected"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5003, commands, "R3 Remove Tagging")
-    print("\nChallenge 3 injected successfully.")
+    injector.execute_commands(5003, commands, "Challenge 3")
+    print("\nChallenge 3 fault injected successfully.")
+    print("Refer to challenges.md for the symptom and goal.")
 
 if __name__ == "__main__":
     inject()

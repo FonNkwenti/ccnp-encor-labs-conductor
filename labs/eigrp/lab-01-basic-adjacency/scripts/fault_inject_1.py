@@ -6,7 +6,6 @@ from fault_utils import FaultInjector
 
 def inject():
     """AS Number Mismatch on R2"""
-    print("Injecting Challenge 1: AS Number Mismatch...")
     commands = [
         "no router eigrp 100",
         "router eigrp 200",
@@ -15,8 +14,9 @@ def inject():
         " network 10.0.23.0 0.0.0.3"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5002, commands, "R2 AS Mismatch")
-    print("\nChallenge 1 injected successfully.")
+    injector.execute_commands(5002, commands, "Challenge 1")
+    print("\nChallenge 1 fault injected successfully.")
+    print("Refer to challenges.md for the symptom and goal.")
 
 if __name__ == "__main__":
     inject()

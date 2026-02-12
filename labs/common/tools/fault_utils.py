@@ -1,4 +1,4 @@
-import telnetlib
+import socket
 import time
 import sys
 
@@ -10,27 +10,26 @@ class FaultInjector:
         """
         Connects via Telnet and executes a list of configuration commands.
         """
-        print(f"[{description}] Connecting to {self.host}:{port}...")
         try:
-            tn = telnetlib.Telnet(self.host, port, timeout=5)
+            tn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tn.settimeout(5)
+            tn.connect((self.host, port))
             
             # Ensure prompt
-            tn.write(b"\n")
+            tn.sendall(b"\n")
             time.sleep(1)
             
-            tn.write(b"enable\n")
-            tn.write(b"configure terminal\n")
+            tn.sendall(b"enable\n")
+            tn.sendall(b"configure terminal\n")
             time.sleep(0.5)
 
             for cmd in commands:
-                print(f"  Executing: {cmd}")
-                tn.write(cmd.encode('ascii') + b"\n")
+                tn.sendall(cmd.encode('ascii') + b"\n")
                 time.sleep(0.2)
             
-            tn.write(b"end\n")
-            tn.write(b"exit\n")
+            tn.sendall(b"end\n")
+            tn.sendall(b"exit\n")
             tn.close()
-            print(f"  Successfully executed commands.")
             return True
         except Exception as e:
             print(f"  Error: {e}")

@@ -6,15 +6,15 @@ from fault_utils import FaultInjector
 
 def inject():
     """Missing 'subnets' keyword in OSPF"""
-    print("Injecting Challenge 3: Missing 'subnets' keyword...")
     commands = [
         "router ospf 1",
         " no redistribute eigrp 100",
         " redistribute eigrp 100"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5001, commands, "R1 Missing Subnets Keyword")
-    print("\nChallenge 3 injected successfully.")
+    injector.execute_commands(5001, commands, "Challenge 3")
+    print("\nChallenge 3 fault injected successfully.")
+    print("Refer to challenges.md for the symptom and goal.")
 
 if __name__ == "__main__":
     inject()

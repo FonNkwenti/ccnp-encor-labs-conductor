@@ -6,7 +6,6 @@ from fault_utils import FaultInjector
 
 def inject():
     """Missing static keyword in stub config"""
-    print("Injecting Challenge 3: Missing Static in Stub...")
     commands = [
         "ip route 192.168.99.0 255.255.255.0 Null0",
         "router eigrp 100",
@@ -14,8 +13,9 @@ def inject():
         " eigrp stub connected summary"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5005, commands, "R5 Redistribute Static but Stub restricted")
-    print("\nChallenge 3 injected successfully.")
+    injector.execute_commands(5005, commands, "Challenge 3")
+    print("\nChallenge 3 fault injected successfully.")
+    print("Refer to challenges.md for the symptom and goal.")
 
 if __name__ == "__main__":
     inject()

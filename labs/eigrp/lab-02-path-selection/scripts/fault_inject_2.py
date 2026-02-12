@@ -6,14 +6,14 @@ from fault_utils import FaultInjector
 
 def inject():
     """Extreme Delay on Primary Link"""
-    print("Injecting Challenge 2: Primary Link Delay Inflation...")
     commands = [
         "interface FastEthernet1/0",
         " delay 100000"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5001, commands, "R1 Fa1/0 High Delay")
-    print("\nChallenge 2 injected successfully.")
+    injector.execute_commands(5001, commands, "Challenge 2")
+    print("\nChallenge 2 fault injected successfully.")
+    print("Refer to challenges.md for the symptom and goal.")
 
 if __name__ == "__main__":
     inject()

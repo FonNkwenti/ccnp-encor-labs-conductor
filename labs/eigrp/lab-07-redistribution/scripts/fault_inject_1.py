@@ -6,15 +6,15 @@ from fault_utils import FaultInjector
 
 def inject():
     """Missing Seed Metric for EIGRP"""
-    print("Injecting Challenge 1: Missing EIGRP Seed Metric...")
     commands = [
         "router eigrp 100",
         " no redistribute ospf 1",
         " redistribute ospf 1"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5001, commands, "R1 Missing EIGRP Metric")
-    print("\nChallenge 1 injected successfully.")
+    injector.execute_commands(5001, commands, "Challenge 1")
+    print("\nChallenge 1 fault injected successfully.")
+    print("Refer to challenges.md for the symptom and goal.")
 
 if __name__ == "__main__":
     inject()

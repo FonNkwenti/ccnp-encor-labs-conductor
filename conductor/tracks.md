@@ -4,6 +4,11 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
+- [ ] **Track: Fault Injection Scripts — Hide Commands from Student Terminal Output**
+  *Link: [./tracks/fault_script_log_cleanup_20260212/](./tracks/fault_script_log_cleanup_20260212/)*
+
+---
+
 - [x] **Track: Draw.io Visual Style Guide & Diagram Remediation**
   *Link: [./tracks/drawio_style_guide_20260211/](./tracks/drawio_style_guide_20260211/)*
 

@@ -6,14 +6,14 @@ from fault_utils import FaultInjector
 
 def inject():
     """Broad Access-List Filtering on R3"""
-    print("Injecting Challenge 3: Broad Access-List Filtering...")
     commands = [
         "no access-list 66",
         "access-list 66 deny 0.0.0.0 255.255.255.255"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5003, commands, "R3 Block All to R5")
-    print("\nChallenge 3 injected successfully.")
+    injector.execute_commands(5003, commands, "Challenge 3")
+    print("\nChallenge 3 fault injected successfully.")
+    print("Refer to challenges.md for the symptom and goal.")
 
 if __name__ == "__main__":
     inject()
