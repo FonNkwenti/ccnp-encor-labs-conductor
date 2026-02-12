@@ -18,8 +18,9 @@ class LabRefresher:
             tn.connect((host, port))
             tn.sendall(b"\r\n")
             time.sleep(0.5)
-            tn.sendall(b"enable\n")
-            tn.sendall(b"configure terminal\n")
+            tn.sendall(b"enable\r\n")
+            time.sleep(0.3)
+            tn.sendall(b"configure terminal\r\n")
             
             with open(config_file, 'r') as f:
                 for line in f:
@@ -27,8 +28,8 @@ class LabRefresher:
                         tn.sendall(line.encode('ascii') + b"\r\n")
                         time.sleep(0.1)
             
-            tn.sendall(b"end\n")
-            tn.sendall(b"write memory\n")
+            tn.sendall(b"end\r\n")
+            tn.sendall(b"write memory\r\n")
             tn.close()
             print(f"  Successfully refreshed.")
             return True

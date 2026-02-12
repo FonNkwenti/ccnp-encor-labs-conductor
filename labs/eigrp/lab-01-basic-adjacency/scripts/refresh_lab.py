@@ -19,6 +19,7 @@ class LabRefresher:
             tn.sendall(b"\r\n")
             time.sleep(0.5)
             tn.sendall(b"enable\r\n")
+            time.sleep(0.3)
             tn.sendall(b"configure terminal\r\n")
             
             with open(config_file, 'r') as f:
