@@ -10,6 +10,24 @@ class LabRefresher:
     def __init__(self, devices):
         self.devices = devices  # List of (name, port, config_path)
 
+    def _parse_cleanup_commands(self, config_file):
+        """Parse config to find interfaces and routing protocols to reset."""
+        interfaces = []
+        routers = []
+        with open(config_file, 'r') as f:
+            for line in f:
+                stripped = line.strip()
+                if stripped.startswith('interface '):
+                    interfaces.append(stripped.split(' ', 1)[1])
+                elif stripped.startswith('router '):
+                    routers.append(stripped)
+        cleanup = []
+        for iface in interfaces:
+            cleanup.append(f"default interface {iface}")
+        for router in routers:
+            cleanup.append(f"no {router}")
+        return cleanup
+
     def push_config(self, host, port, config_file):
         print(f"Refreshing {host}:{port} with {config_file}...")
         try:
@@ -21,14 +39,23 @@ class LabRefresher:
             tn.sendall(b"enable\r\n")
             time.sleep(0.3)
             tn.sendall(b"configure terminal\r\n")
+            time.sleep(0.3)
 
+            # Default all interfaces and remove routing protocols
+            cleanup = self._parse_cleanup_commands(config_file)
+            for cmd in cleanup:
+                tn.sendall(cmd.encode('ascii') + b"\r\n")
+                time.sleep(0.3)
+
+            # Push initial config
             with open(config_file, 'r') as f:
                 for line in f:
                     if line.strip() and not line.startswith('!'):
-                        tn.sendall(line.encode('ascii') + b"\r\n")
+                        tn.sendall(line.strip().encode('ascii') + b"\r\n")
                         time.sleep(0.1)
 
             tn.sendall(b"end\r\n")
+            time.sleep(0.2)
             tn.sendall(b"write memory\r\n")
             tn.close()
             print(f"  Successfully refreshed.")
