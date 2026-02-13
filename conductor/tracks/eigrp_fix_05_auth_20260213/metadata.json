@@ -1,0 +1,33 @@
+{
+  "track_id": "eigrp_fix_05_auth_20260213",
+  "title": "Remove SHA-256 from EIGRP Lab 05 + Cascade Fix Labs 06-09",
+  "status": "complete",
+  "created": "2026-02-13",
+  "completed": "2026-02-13",
+  "scope": "bug_fix",
+  "files_changed": [
+    "labs/eigrp/lab-05-authentication-advanced/workbook.md",
+    "labs/eigrp/lab-05-authentication-advanced/challenges.md",
+    "labs/eigrp/lab-05-authentication-advanced/README.md",
+    "labs/eigrp/lab-05-authentication-advanced/solutions/R2.cfg",
+    "labs/eigrp/lab-05-authentication-advanced/solutions/R3.cfg",
+    "labs/eigrp/lab-05-authentication-advanced/scripts/fault_inject_2.py",
+    "labs/eigrp/lab-05-authentication-advanced/scripts/fault_inject_3.py",
+    "labs/eigrp/lab-06-filtering-control/initial-configs/R2.cfg",
+    "labs/eigrp/lab-06-filtering-control/initial-configs/R3.cfg",
+    "labs/eigrp/lab-06-filtering-control/solutions/R2.cfg",
+    "labs/eigrp/lab-06-filtering-control/solutions/R3.cfg",
+    "labs/eigrp/lab-07-redistribution/initial-configs/R2.cfg",
+    "labs/eigrp/lab-07-redistribution/initial-configs/R3.cfg",
+    "labs/eigrp/lab-07-redistribution/solutions/R2.cfg",
+    "labs/eigrp/lab-07-redistribution/solutions/R3.cfg",
+    "labs/eigrp/lab-08-eigrp-over-vpn/initial-configs/R2.cfg",
+    "labs/eigrp/lab-08-eigrp-over-vpn/initial-configs/R3.cfg",
+    "labs/eigrp/lab-08-eigrp-over-vpn/solutions/R2.cfg",
+    "labs/eigrp/lab-08-eigrp-over-vpn/solutions/R3.cfg",
+    "labs/eigrp/lab-09-dual-stack-migration/initial-configs/R2.cfg",
+    "labs/eigrp/lab-09-dual-stack-migration/initial-configs/R3.cfg",
+    "labs/eigrp/README.md",
+    "labs/eigrp/baseline.yaml"
+  ]
+}

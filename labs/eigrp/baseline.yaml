@@ -182,7 +182,7 @@ labs:
     devices: [R1, R2, R3, R5]
     extends: 4
     objectives:
-      - Implement MD5/SHA authentication
+      - Implement MD5 authentication
       - Configure route tagging
       - Use offset lists
 
@@ -233,6 +233,18 @@ labs:
       - Implement dual-stack
       - Validate migration strategy
 
+  - number: 10
+    title: Named Mode Advanced Features
+    difficulty: Advanced
+    time_minutes: 75
+    devices: [R1, R2, R3, R5, R6, R7]
+    extends: 9
+    topology_note: R1 and R6 (c7200, IOS 15.3) are the Named Mode targets
+    objectives:
+      - Configure SHA-256 HMAC authentication via af-interface
+      - Enable wide metrics (64-bit) and rib-scale
+      - Tune per-interface settings via af-interface sub-mode
+
 # =============================================================================
 # TUNNEL OVERLAYS - Logical overlay connections per lab
 # =============================================================================
@@ -250,3 +262,10 @@ tunnel_overlays:
     target: R6:Tunnel8
     subnet: 172.16.16.0/30
     description: GRE Tunnel for EIGRP (Dual-Stack)
+
+  - lab: 10
+    type: gre
+    source: R1:Tunnel8
+    target: R6:Tunnel8
+    subnet: 172.16.16.0/30
+    description: GRE Tunnel for EIGRP (Named Mode + SHA-256)

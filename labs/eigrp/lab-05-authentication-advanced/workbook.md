@@ -6,7 +6,6 @@
 ## 1. Concepts & Skills Covered
 
 - Configure EIGRP MD5 authentication using key chains
-- Implement HMAC-SHA-256 authentication for EIGRP
 - Apply route tagging to identify source networks
 - Utilize offset lists for EIGRP metric manipulation
 - Verify secure adjacency establishment and route propagation
@@ -33,7 +32,7 @@
                         │    │   Branch    │
                         │    │ 2.2.2.2/32  │
                         │    └────┬────────┘
-                        │         │ Fa0/1 (SHA-256)
+                        │         │ Fa0/1
                         │         │ 10.0.23.1/30
                         │         │
                         │         │ 10.0.23.2/30
@@ -58,7 +57,7 @@
 ### Scenario Narrative
 Following a recent security audit by the **Skynet Global** Cyber-Defense unit, several vulnerabilities were identified in the regional routing domain. Specifically, the EIGRP adjacency between the Headquarters (R1) and the Branch (R2) is currently unauthenticated, making it susceptible to route injection attacks. 
 
-As the Senior Security Engineer, your task is to implement a robust authentication framework across the Core and Branch routers. You must deploy **MD5 authentication** between the Hub (R1) and the Branch (R2), and upgrade the Remote Branch (R3) to utilize the advanced **SHA-256 HMAC authentication** to meet the enterprise's "Encryption-in-Transit" mandate.
+As the Senior Security Engineer, your task is to implement a robust authentication framework across the Core and Branch routers. You must deploy **MD5 authentication** between the Hub (R1) and the Branch (R2) to secure the control plane.
 
 Furthermore, you will use **Route Tagging** to identify and track routes originating from the non-trusted Stub Network (R5) and apply **Offset Lists** to manipulate traffic flow, ensuring that high-priority security traffic is appropriately prioritized.
 
@@ -113,18 +112,12 @@ Secure the control plane communication between the Hub and the Branch.
 - Configure `key 1` with the password `SkynetSecret`.
 - Enable EIGRP MD5 authentication on the interfaces connecting R1 and R2.
 
-### Objective 2: Implement SHA-256 Authentication (R2 <-> R3)
-Deploy advanced HMAC-SHA-256 authentication for the Remote Branch link.
-- On **R2** and **R3**, enable EIGRP SHA-256 authentication on the interconnecting FastEthernet interfaces.
-- Use the password `AdvancedSecurity256`.
-- *Note: SHA-256 for EIGRP does not use key-chains in IOS 15.x; it is configured directly on the interface.*
-
-### Objective 3: Route Tagging for Untrusted Networks (R5)
+### Objective 2: Route Tagging for Untrusted Networks (R5)
 Identify routes coming from the R5 stub network for auditing purposes.
 - On **R3**, create a route-map to tag all routes received from **R5** with the tag `555`.
 - Apply this route-map to the EIGRP process or interface as appropriate to ensure R1 receives the tagged routes.
 
-### Objective 4: Traffic Engineering with Offset Lists (R1)
+### Objective 3: Traffic Engineering with Offset Lists (R1)
 Manipulate the metric of tagged routes to influence path selection.
 - On **R1**, identify routes with tag `555`.
 - Use an **Offset List** to add `500000` to the composite metric of these routes as they are received.
@@ -157,19 +150,7 @@ H   Address                 Interface              Hold Uptime   SRTT   RTO  Q  
    Authentication MD5, key-chain "SKYNET_MD5"
 ```
 
-### 7.2 Verify SHA-256 Authentication (R3 Perspective)
-```bash
-R3# show ip eigrp neighbors detail
-EIGRP-IPv4 Neighbors for AS 100
-H   Address                 Interface              Hold Uptime   SRTT   RTO  Q  Seq
-                                                   (sec)         (ms)       Cnt Num
-0   10.0.23.1               Fa0/0                    11 00:01:45   20   200  0  32
-   Version 12.4/2.0, Retrans: 0, Retries: 0, Prefixes: 6
-   Topology-ids from peer - 0 
-   Authentication SHA-256
-```
-
-### 7.3 Verify Route Tagging & Offset Lists (R1 Perspective)
+### 7.2 Verify Route Tagging & Offset Lists (R1 Perspective)
 ```bash
 R1# show ip eigrp topology 5.5.5.5/32
 EIGRP-IPv4 Topology Entry for AS 100 for 5.5.5.5/32
@@ -193,12 +174,12 @@ EIGRP-IPv4 Topology Entry for AS 100 for 5.5.5.5/32
 ## 8. Troubleshooting Scenario
 
 ### The Fault
-After enabling SHA-256 authentication between R2 and R3, the neighbor relationship fails to form. `debug eigrp packets` shows "authentication off or bad key".
+After configuring route tagging on R3 for R5's networks, R1 reports receiving the routes but without tag `555`. The offset list on R1 is therefore having no effect on the metric.
 
 ### The Mission
-1. Verify if the SHA-256 password matches on both sides.
-2. Check if the interface is correctly configured for `ip authentication mode eigrp 100 hmac-sha-256`.
-3. Restore the adjacency and confirm secure route exchange.
+1. Verify that the route-map `TAG_R5` is correctly applied on R3.
+2. Check whether the `distribute-list route-map` is active in the correct direction.
+3. Restore proper tagging and confirm that R1 sees tag `555` and the offset list applies.
 
 ---
 
@@ -214,14 +195,7 @@ interface FastEthernet1/0
  ip authentication key-chain eigrp 100 SKYNET_MD5
 ```
 
-### Objective 2: SHA-256 Authentication (R2/R3)
-```bash
-interface FastEthernet0/1
- ip authentication mode eigrp 100 hmac-sha-256 SkynetSHA
-! Note: R3 uses Fa0/0
-```
-
-### Objective 3: Route Tagging (R3)
+### Objective 2: Route Tagging (R3)
 ```bash
 access-list 55 permit 5.5.5.5
 access-list 55 permit 10.5.0.0 0.0.255.255
@@ -236,7 +210,7 @@ router eigrp 100
 ! OR apply to neighbor if supported
 ```
 
-### Objective 4: Offset List (R1)
+### Objective 3: Offset List (R1)
 ```bash
 route-map MATCH_TAG permit 10
  match tag 555
@@ -250,7 +224,6 @@ router eigrp 100
 ## 10. Lab Completion Checklist
 
 - [ ] MD5 Authentication active between R1 and R2.
-- [ ] SHA-256 Authentication active between R2 and R3.
 - [ ] R5 networks tagged with `555` on R1.
 - [ ] Offset list correctly increases metric for tagged routes on R1.
 - [ ] Troubleshooting challenge resolved.

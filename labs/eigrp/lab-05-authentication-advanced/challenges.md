@@ -1,6 +1,6 @@
 # Troubleshooting Challenges: EIGRP Lab 05
 
-These challenges are designed to test your diagnostic skills. 
+These challenges are designed to test your diagnostic skills.
 
 **Instructions:**
 1. Inject a fault using the corresponding script (e.g., `python3 scripts/fault_inject_1.py`).
@@ -15,16 +15,16 @@ These challenges are designed to test your diagnostic skills.
 
 ---
 
-## Challenge 2: Advanced Auth Anarchy (SHA-256)
+## Challenge 2: Tagging & Offsets Gone Wrong
 **Script:** `scripts/fault_inject_2.py`
-**Symptom:** The new HMAC-SHA-256 authentication between R2 and R3 is not working. `show ip eigrp neighbors detail` shows no peers on the link.
-
-**Goal:** Determine if the issue is a password mismatch or a configuration mode error, and fix it.
-
----
-
-## Challenge 3: Tagging & Offsets Gone Wrong
-**Script:** `scripts/fault_inject_3.py`
 **Symptom:** R1 is successfully receiving routes from R5, but they are not being tagged with `555`, and consequently, the Offset List is not applying the expected metric penalty.
 
 **Goal:** Find where the tagging process is failing (likely on R3) and ensure that R1 receives the routes with the correct tag.
+
+---
+
+## Challenge 3: The Phantom Penalty
+**Script:** `scripts/fault_inject_3.py`
+**Symptom:** R1's offset list appears to be active, but the metric penalty is being applied to the wrong routes. Routes from R5 that should be penalized are unaffected, while other routes are unexpectedly inflated.
+
+**Goal:** Investigate the route-map `MATCH_TAG` on R1. Determine if the tag value being matched is correct (should be `555`), and fix the mismatch.

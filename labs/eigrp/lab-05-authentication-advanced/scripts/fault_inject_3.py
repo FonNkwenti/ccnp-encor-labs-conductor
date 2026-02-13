@@ -5,14 +5,14 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.
 from fault_utils import FaultInjector
 
 def inject():
-    """Route Map Tagging Removal on R3"""
+    """Wrong Tag Match in MATCH_TAG Route-Map on R1"""
     commands = [
-        "router eigrp 100",
-        " no redistribute connected route-map TAG_R5",
-        " redistribute connected"
+        "route-map MATCH_TAG permit 10",
+        " no match tag 555",
+        " match tag 999"
     ]
     injector = FaultInjector()
-    injector.execute_commands(5003, commands, "Challenge 3")
+    injector.execute_commands(5001, commands, "Challenge 3")
     print("\nChallenge 3 fault injected successfully.")
     print("Refer to challenges.md for the symptom and goal.")
 

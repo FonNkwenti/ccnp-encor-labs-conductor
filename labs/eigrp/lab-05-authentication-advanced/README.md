@@ -4,7 +4,7 @@
 ![Topology Diagram](./topology.png)
 
 ## Objectives
-- Configure EIGRP MD5 and HMAC-SHA-256 authentication.
+- Configure EIGRP MD5 authentication.
 - Implement route tagging and offset lists.
 - Verify secure adjacency and metric manipulation.
 

@@ -126,3 +126,13 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [ ] **Track: Implement OSPF Lab 08: OSPFv3 Integration**
   *Link: [./tracks/ospf_std_08_20260207/](./tracks/ospf_std_08_20260207/)*
+
+---
+
+- [x] **Track: Remove SHA-256 from EIGRP Lab 05 + Cascade Fix Labs 06-09**
+  *Link: [./tracks/eigrp_fix_05_auth_20260213/](./tracks/eigrp_fix_05_auth_20260213/)*
+
+---
+
+- [x] **Track: Implement EIGRP Lab 10: Named Mode Advanced Features**
+  *Link: [./tracks/eigrp_std_10_20260213/](./tracks/eigrp_std_10_20260213/)*

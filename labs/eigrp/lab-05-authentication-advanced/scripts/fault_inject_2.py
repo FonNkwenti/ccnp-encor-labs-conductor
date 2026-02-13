@@ -5,12 +5,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.
 from fault_utils import FaultInjector
 
 def inject():
-    """SHA-256 Mode Error on R3"""
-    # Change mode to MD5 on one side while other side is SHA-256
+    """Route Map Tagging Removal on R3"""
     commands = [
-        "interface FastEthernet0/0",
-        " no ip authentication mode eigrp 100 hmac-sha-256",
-        " ip authentication mode eigrp 100 md5"
+        "router eigrp 100",
+        " no distribute-list route-map TAG_R5 out FastEthernet0/0",
+        " redistribute connected"
     ]
     injector = FaultInjector()
     injector.execute_commands(5003, commands, "Challenge 2")
