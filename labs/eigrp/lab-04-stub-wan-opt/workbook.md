@@ -240,19 +240,40 @@ After configuring R5 as a `receive-only` stub for a security test, the Headquart
 
 ## 9. Solutions (Spoiler Alert!)
 
-### Objective 1: Stub Configuration (R5)
+### Objective 1: Stub Configuration
+
+<details>
+<summary>Click to view R5 Configuration</summary>
+
 ```bash
 router eigrp 100
  eigrp stub connected summary
 ```
+</details>
 
-### Objective 2: WAN Tuning (R1 & R2)
+### Objective 2: WAN Tuning
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 interface FastEthernet1/0
  bandwidth 1544
  ip hello-interval eigrp 100 60
  ip hold-time eigrp 100 180
 ```
+</details>
+
+<details>
+<summary>Click to view R2 Configuration</summary>
+
+```bash
+interface FastEthernet0/0
+ bandwidth 1544
+ ip hello-interval eigrp 100 60
+ ip hold-time eigrp 100 180
+```
+</details>
 
 ---
 

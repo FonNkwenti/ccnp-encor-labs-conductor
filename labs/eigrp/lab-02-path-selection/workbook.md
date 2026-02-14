@@ -224,22 +224,30 @@ After configuring a Variance of 10, R1 still only uses a single path to reach R3
 > 💡 **Try to complete the lab challenge without looking at these steps first!**
 
 ### Objective 2: Metric Manipulation
-**R1:**
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 configure terminal
 interface FastEthernet1/1
  delay 5000
 end
 ```
+</details>
 
 ### Objective 3: Unequal-Cost Load Balancing
-**R1:**
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 configure terminal
 router eigrp 100
  variance 2
 end
 ```
+</details>
 
 ---
 

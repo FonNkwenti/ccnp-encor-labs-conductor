@@ -219,16 +219,39 @@ After enabling SHA-256 authentication on R1's Tunnel8 interface, the EIGRP adjac
 
 ## 9. Solutions (Spoiler Alert!)
 
-### Objective 1: SHA-256 Authentication (R1/R6)
+### Objective 1: SHA-256 HMAC Authentication
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 router eigrp SKYNET_CORE
  address-family ipv4 autonomous-system 100
   af-interface Tunnel8
    authentication mode hmac-sha-256 SkynetSHA256!
   exit-af-interface
+ exit-address-family
 ```
+</details>
 
-### Objective 2: Wide Metrics (R1/R6)
+<details>
+<summary>Click to view R6 Configuration</summary>
+
+```bash
+router eigrp SKYNET_CORE
+ address-family ipv4 autonomous-system 100
+  af-interface Tunnel8
+   authentication mode hmac-sha-256 SkynetSHA256!
+  exit-af-interface
+ exit-address-family
+```
+</details>
+
+### Objective 2: Wide Metrics
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 router eigrp SKYNET_CORE
  address-family ipv4 autonomous-system 100
@@ -236,9 +259,29 @@ router eigrp SKYNET_CORE
    metric version 64bit
    metric rib-scale 128
   exit-af-topology
+ exit-address-family
 ```
+</details>
 
-### Objective 3: AF-Interface Tuning (R1)
+<details>
+<summary>Click to view R6 Configuration</summary>
+
+```bash
+router eigrp SKYNET_CORE
+ address-family ipv4 autonomous-system 100
+  topology base
+   metric version 64bit
+   metric rib-scale 128
+  exit-af-topology
+ exit-address-family
+```
+</details>
+
+### Objective 3: AF-Interface Tuning
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 router eigrp SKYNET_CORE
  address-family ipv4 autonomous-system 100
@@ -249,7 +292,9 @@ router eigrp SKYNET_CORE
   af-interface Loopback0
    passive-interface
   exit-af-interface
+ exit-address-family
 ```
+</details>
 
 ---
 

@@ -184,18 +184,27 @@ After applying the `AUTHORIZED_NETS` prefix-list on R1, the neighbor adjacency w
 
 ## 9. Solutions (Spoiler Alert!)
 
-### Objective 1: Prefix-List Filtering (R1)
+### Objective 1: Prefix-List Filtering
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 ip prefix-list AUTHORIZED_NETS seq 5 permit 2.2.2.2/32
 ip prefix-list AUTHORIZED_NETS seq 10 permit 3.3.3.3/32
 ip prefix-list AUTHORIZED_NETS seq 15 permit 10.5.0.0/16 ge 24 le 32
-ip prefix-list AUTHORIZED_NETS seq 20 permit 10.0.12.0/30 ! Fix for next-hop
+ip prefix-list AUTHORIZED_NETS seq 20 permit 10.0.12.0/30
 !
 router eigrp 100
  distribute-list prefix AUTHORIZED_NETS in FastEthernet1/0
 ```
+</details>
 
-### Objective 2: Route-Map Control (R2)
+### Objective 2: Route-Map Control
+
+<details>
+<summary>Click to view R2 Configuration</summary>
+
 ```bash
 ip prefix-list R1_LOOP permit 1.1.1.1/32
 !
@@ -206,8 +215,13 @@ route-map RM_FILTER_R3 permit 20
 router eigrp 100
  distribute-list route-map RM_FILTER_R3 out FastEthernet0/1
 ```
+</details>
 
-### Objective 3: Access-List Filtering (R3)
+### Objective 3: Access-List Filtering
+
+<details>
+<summary>Click to view R3 Configuration</summary>
+
 ```bash
 access-list 66 deny 10.0.0.0 0.255.255.255
 access-list 66 permit any
@@ -215,6 +229,7 @@ access-list 66 permit any
 router eigrp 100
  distribute-list 66 out FastEthernet0/1
 ```
+</details>
 
 ---
 

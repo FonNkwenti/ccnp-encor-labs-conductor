@@ -232,29 +232,90 @@ After enabling IPv6 on R6, the router cannot form an EIGRP adjacency with R1 ove
 
 ## 9. Solutions (Spoiler Alert!)
 
-### Objective 1: Migration to Named Mode (R1)
+### Objective 1: Migration to Named Mode
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 router eigrp SKYNET_CORE
  address-family ipv4 autonomous-system 100
-  topology base
-  exit-af-topology
   network 1.1.1.1 0.0.0.0
   network 10.0.12.0 0.0.0.3
-  ...
+  network 172.16.16.0 0.0.0.3
+  topology base
+  exit-af-topology
+ exit-address-family
 ```
+</details>
 
-### Objective 2: IPv6 Named Mode (General)
+### Objective 2: Enable EIGRP for IPv6
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 ipv6 unicast-routing
+!
+interface FastEthernet1/0
+ ipv6 address 2001:DB8:ACAD:12::1/64
+ ipv6 enable
+!
+interface Tunnel8
+ ipv6 address 2001:DB8:ACAD:88::1/64
+ ipv6 enable
+!
 router eigrp SKYNET_CORE
  address-family ipv6 autonomous-system 100
   topology base
   exit-af-topology
+ exit-address-family
+```
+</details>
+
+<details>
+<summary>Click to view R2 Configuration</summary>
+
+```bash
+ipv6 unicast-routing
 !
 interface FastEthernet0/0
- ipv6 address 2001:DB8:ACAD:12::1/64
+ ipv6 address 2001:DB8:ACAD:12::2/64
  ipv6 enable
+!
+interface FastEthernet0/1
+ ipv6 address 2001:DB8:ACAD:23::1/64
+ ipv6 enable
+!
+router eigrp SKYNET_CORE
+ address-family ipv6 autonomous-system 100
+  topology base
+  exit-af-topology
+ exit-address-family
 ```
+</details>
+
+<details>
+<summary>Click to view R6 Configuration</summary>
+
+```bash
+ipv6 unicast-routing
+!
+interface GigabitEthernet3/0
+ ipv6 address 2001:DB8:ACAD:16::2/64
+ ipv6 enable
+!
+interface Tunnel8
+ ipv6 address 2001:DB8:ACAD:88::2/64
+ ipv6 enable
+!
+router eigrp SKYNET_CORE
+ address-family ipv6 autonomous-system 100
+  topology base
+  exit-af-topology
+ exit-address-family
+```
+</details>
 
 ---
 

@@ -237,7 +237,11 @@ After configuring redistribution, R4 can see Skynet routes, but R2 cannot see th
 
 ## 9. Solutions (Spoiler Alert!)
 
-### Objective 1 & 2: Mutual Redistribution & Tagging (R1)
+### Objectives 1 & 2: Mutual Redistribution & Tagging
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 route-map EIGRP_TO_OSPF permit 10
  set tag 222
@@ -253,6 +257,7 @@ router eigrp 100
 router ospf 1
  redistribute eigrp 100 route-map EIGRP_TO_OSPF subnets
 ```
+</details>
 
 ---
 

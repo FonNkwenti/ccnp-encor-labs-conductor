@@ -241,17 +241,27 @@ After implementing the summary at R7, R3 can no longer reach any of the `172.16.
 
 ## 9. Solutions (Spoiler Alert!)
 
-### Objective 1: Regional Summarization (R7)
+### Objective 1: Regional Summarization
+
+<details>
+<summary>Click to view R7 Configuration</summary>
+
 ```bash
 interface FastEthernet0/0
  ip summary-address eigrp 100 172.16.0.0 255.255.0.0
 ```
+</details>
 
-### Objective 2: Remote Site Summarization (R3)
+### Objective 2: Remote Site Summarization
+
+<details>
+<summary>Click to view R3 Configuration</summary>
+
 ```bash
 interface FastEthernet0/0
  ip summary-address eigrp 100 192.168.0.0 255.255.0.0
 ```
+</details>
 
 ---
 

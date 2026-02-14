@@ -185,17 +185,41 @@ After configuring route tagging on R3 for R5's networks, R1 reports receiving th
 
 ## 9. Solutions (Spoiler Alert!)
 
-### Objective 1: MD5 Authentication (R1/R2)
+### Objective 1: MD5 Authentication
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 key chain SKYNET_MD5
  key 1
   key-string SkynetSecret
+!
 interface FastEthernet1/0
  ip authentication mode eigrp 100 md5
  ip authentication key-chain eigrp 100 SKYNET_MD5
 ```
+</details>
 
-### Objective 2: Route Tagging (R3)
+<details>
+<summary>Click to view R2 Configuration</summary>
+
+```bash
+key chain SKYNET_MD5
+ key 1
+  key-string SkynetSecret
+!
+interface FastEthernet0/0
+ ip authentication mode eigrp 100 md5
+ ip authentication key-chain eigrp 100 SKYNET_MD5
+```
+</details>
+
+### Objective 2: Route Tagging
+
+<details>
+<summary>Click to view R3 Configuration</summary>
+
 ```bash
 access-list 55 permit 5.5.5.5
 access-list 55 permit 10.5.0.0 0.0.255.255
@@ -206,11 +230,15 @@ route-map TAG_R5 permit 10
 route-map TAG_R5 permit 20
 !
 router eigrp 100
- redistribute connected route-map TAG_R5
-! OR apply to neighbor if supported
+ distribute-list route-map TAG_R5 out FastEthernet0/0
 ```
+</details>
 
-### Objective 3: Offset List (R1)
+### Objective 3: Offset List
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 route-map MATCH_TAG permit 10
  match tag 555
@@ -218,6 +246,7 @@ route-map MATCH_TAG permit 10
 router eigrp 100
  offset-list 0 in 500000 FastEthernet1/0 route-map MATCH_TAG
 ```
+</details>
 
 ---
 

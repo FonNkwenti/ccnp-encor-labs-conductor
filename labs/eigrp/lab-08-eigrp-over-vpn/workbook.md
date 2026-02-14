@@ -231,9 +231,12 @@ The EIGRP neighbor relationship over the tunnel is flapping constantly. `debug i
 
 ## 9. Solutions (Spoiler Alert!)
 
-### Objective 1 & 2: Tunnel & EIGRP
+### Objectives 1 & 2: Tunnel & EIGRP
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
-! R1
 interface Tunnel8
  ip address 172.16.16.1 255.255.255.252
  tunnel source 10.0.16.1
@@ -241,8 +244,13 @@ interface Tunnel8
 !
 router eigrp 100
  network 172.16.16.0 0.0.0.3
+```
+</details>
 
-! R6
+<details>
+<summary>Click to view R6 Configuration</summary>
+
+```bash
 interface Tunnel8
  ip address 172.16.16.2 255.255.255.252
  tunnel source 10.0.16.2
@@ -252,13 +260,29 @@ router eigrp 100
  network 172.16.16.0 0.0.0.3
  network 6.6.6.6 0.0.0.0
 ```
+</details>
 
 ### Objective 3: MTU/MSS Optimization
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 interface Tunnel8
  ip mtu 1400
  ip tcp adjust-mss 1360
 ```
+</details>
+
+<details>
+<summary>Click to view R6 Configuration</summary>
+
+```bash
+interface Tunnel8
+ ip mtu 1400
+ ip tcp adjust-mss 1360
+```
+</details>
 
 ---
 

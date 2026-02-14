@@ -268,7 +268,9 @@ After a recent "optimization" by a junior admin, R2 is no longer forming an adja
 
 ### Objective 1 & 2: Full Configuration
 
-**R1 (Hub):**
+<details>
+<summary>Click to view R1 Configuration</summary>
+
 ```bash
 configure terminal
 router eigrp 100
@@ -279,8 +281,11 @@ router eigrp 100
  no auto-summary
 end
 ```
+</details>
 
-**R2 (Branch):**
+<details>
+<summary>Click to view R2 Configuration</summary>
+
 ```bash
 configure terminal
 router eigrp 100
@@ -292,8 +297,11 @@ router eigrp 100
  no auto-summary
 end
 ```
+</details>
 
-**R3 (Remote):**
+<details>
+<summary>Click to view R3 Configuration</summary>
+
 ```bash
 configure terminal
 router eigrp 100
@@ -304,6 +312,7 @@ router eigrp 100
  no auto-summary
 end
 ```
+</details>
 
 ---
 
