@@ -13,7 +13,7 @@
 - [x] Task: Implement full `solutions/` configurations. 7794547
 - [x] Task: Create automation scripts (`setup_lab.py`, `refresh_lab.py`). 8a06d02
 - [x] Task: Create `challenges.md` with 3 troubleshooting scenarios. cf3d0c2
-- [ ] Task: Create fault injection scripts (`scripts/fault_inject_{1,2,3}.py`).
+- [x] Task: Create fault injection scripts (`scripts/fault_inject_{1,2,3}.py`). 75b99d5
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Verification & Quality Assurance
