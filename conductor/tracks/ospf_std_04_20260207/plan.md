@@ -5,7 +5,7 @@
 - [x] Task: Design Skynet Global scenario narrative for OSPF Lab 04.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Design' (Protocol in workflow.md) [verified]
 
-## Phase 2: Workbook & Config Implementation
+## Phase 2: Workbook & Config Implementation [checkpoint: 0439745]
 - [x] Task: Initialize lab directory `labs/ospf/lab-04-*/`. 3f99536
 - [x] Task: Create `topology.drawio` with active devices. 0544990
 - [x] Task: Generate `initial-configs/` from Lab 03 solutions. 6cda51e
