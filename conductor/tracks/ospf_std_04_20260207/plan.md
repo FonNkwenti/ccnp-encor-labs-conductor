@@ -16,7 +16,7 @@
 - [x] Task: Create fault injection scripts (`scripts/fault-injection/*.py`). 277f374
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md) [verified]
 
-## Phase 3: Verification & Quality Assurance
+## Phase 3: Verification & Quality Assurance [checkpoint: 1fadcd7]
 - [x] Task: Create Verification Cheatsheet in `workbook.md`. 1096972
 - [x] Task: Validate all `show` and `debug` output on IOS c7200/c3725. 1096972
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Finalization' (Protocol in workflow.md) [verified]
