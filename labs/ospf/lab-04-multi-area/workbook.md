@@ -238,7 +238,24 @@ show ip ospf database summary
 
 ---
 
-## 10. Lab Completion Checklist
+## 11. Automated Fault Injection (Optional)
+
+This lab includes automated scripts to inject troubleshooting scenarios into your running GNS3 environment.
+
+**Prerequisites**:
+- GNS3 project must be running
+- All devices accessible via console ports
+- Python 3.x installed
+
+**Quick Start**:
+```bash
+python3 scripts/fault-injection/inject_scenario_01.py  # Inject first fault
+python3 scripts/fault-injection/apply_solution.py      # Restore configuration
+```
+
+See `challenges.md` for detailed scenario descriptions.
+
+## 12. Lab Completion Checklist
 
 - [ ] R2-R3 link migrated to Area 1.
 - [ ] R3 Loopback0 migrated to Area 1.

@@ -13,5 +13,4 @@ if __name__ == "__main__":
     ]
     setup = LabSetup(devices)
     setup.run()
-    print("
-Lab 04 setup complete.")
+    print("Lab 04 setup complete.")

@@ -14,5 +14,4 @@ if __name__ == "__main__":
     ]
     refresher = LabRefresher(devices)
     refresher.run()
-    print("
-OSPF Lab 04 has been refreshed.")
+    print("OSPF Lab 04 has been refreshed.")
