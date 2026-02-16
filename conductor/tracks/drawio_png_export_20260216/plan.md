@@ -1,6 +1,6 @@
 # Implementation Plan: Draw.io PNG Export Automation
 
-## Phase 1: Tooling Research & Setup
+## Phase 1: Tooling Research & Setup [checkpoint: 042e3cc]
 - [x] Task: Research CLI tools for Draw.io XML to PNG conversion (e.g., `drawio-batch`, `draw.io` desktop app).
 - [x] Task: Install and verify the chosen tool in the local environment.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Tooling' (Protocol in workflow.md) [verified]
