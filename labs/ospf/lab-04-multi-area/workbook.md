@@ -180,20 +180,61 @@ You moved R3's `FastEthernet0/1` (the link to R1) into **Area 1** as well. Now, 
 
 ## 9. Solutions (Spoiler Alert!)
 
+> Try to complete the lab challenge without looking at these steps first!
+
 ### Objective 1: Migrate Link to Area 1
+
+<details>
+<summary>Click to view R2 and R3 Configuration</summary>
+
 ```bash
 ! R2
+configure terminal
 router ospf 1
  no network 10.23.0.0 0.0.0.3 area 0
  network 10.23.0.0 0.0.0.3 area 1
+ end
 
 ! R3
+configure terminal
 router ospf 1
  no network 10.23.0.0 0.0.0.3 area 0
  no network 3.3.3.3 0.0.0.0 area 0
  network 10.23.0.0 0.0.0.3 area 1
  network 3.3.3.3 0.0.0.0 area 1
+ end
 ```
+</details>
+
+### Objective 2: Verify ABR Role and Reachability
+
+<details>
+<summary>Click to view Verification Commands</summary>
+
+```bash
+! On R2
+show ip ospf | include border
+
+! On R1
+ping 10.3.3.3
+show ip route ospf | include 10.3.3.3
+```
+</details>
+
+### Objective 3: Analyze OSPF LSA Types
+
+<details>
+<summary>Click to view Database Analysis Commands</summary>
+
+```bash
+! On R1 (View Summary LSAs from Area 1)
+show ip ospf database summary 10.3.3.3
+
+! On R2 (View LSAs for both areas)
+show ip ospf database router
+show ip ospf database summary
+```
+</details>
 
 ---
 

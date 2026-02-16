@@ -68,7 +68,45 @@ You are a CCNP ENCOR lab developer. Create a detailed lab workbook and setup scr
 6. Verification & Analysis
 7. Verification Cheatsheet
 8. **Troubleshooting Scenarios** (REQUIRED - minimum 3 scenarios)
-9. Solutions (Spoiler Alert!)
+9. **Solutions (Spoiler Alert!)** (REQUIRED - must cover ALL objectives)
+
+### Solutions Section Requirements:
+
+1. **Complete Coverage**: You MUST provide a step-by-step configuration solution for EVERY objective listed in the "Lab Challenge" section.
+2. **Collapsible Formatting**: Every solution (both configurations and verification commands) MUST be wrapped in a collapsible `<details>` block to prevent students from seeing the answer prematurely.
+3. **Cisco CLI Blocks**: All configurations and command outputs must be inside standard Markdown code blocks (` ```bash `).
+
+### Example Format:
+
+```markdown
+## 9. Solutions (Spoiler Alert!)
+
+> Try to complete the lab challenge without looking at these steps first!
+
+### Objective 1: [Objective Title]
+
+<details>
+<summary>Click to view [Device] Configuration</summary>
+
+```bash
+! [Device]
+router ospf 1
+ ...
+```
+</details>
+
+### Objective 2: [Objective Title]
+
+<details>
+<summary>Click to view Verification Commands</summary>
+
+```bash
+! On [Device]
+show ip route ospf
+```
+</details>
+```
+
 10. Lab Completion Checklist
 ```
 
