@@ -1,8 +1,8 @@
 # Implementation Plan: Implement OSPF Lab 04
 
 ## Phase 1: Lab Design & Topology
-- [ ] Task: Review `labs/ospf/baseline.yaml` for Lab 04 requirements.
-- [ ] Task: Design Skynet Global scenario narrative for OSPF Lab 04.
+- [x] Task: Review `labs/ospf/baseline.yaml` for Lab 04 requirements.
+- [x] Task: Design Skynet Global scenario narrative for OSPF Lab 04.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Design' (Protocol in workflow.md)
 
 ## Phase 2: Workbook & Config Implementation

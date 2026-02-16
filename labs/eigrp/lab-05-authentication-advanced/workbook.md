@@ -24,6 +24,7 @@
                     └───┬─────────┬───┘
                         │ Fa1/0   │ Fa1/1 (WAN Link)
                         │ (MD5)   │ 10.0.12.1/30
+                        │(Tag 111)│
                         │         │
            10.0.12.1/30 │         │
                         │         │ 10.0.12.2/30
@@ -42,7 +43,7 @@
                  │  Remote Branch  
                  │  3.3.3.3/32     
                  └───┬─────────┐
-                     │ Fa0/1   │ (Tag 555)
+                     │ Fa0/1   │
                      │         │ 10.0.35.1/30
                      │         │
                      │         │ 10.0.35.2/30
@@ -59,7 +60,7 @@ Following a recent security audit by the **Skynet Global** Cyber-Defense unit, s
 
 As the Senior Security Engineer, your task is to implement a robust authentication framework across the Core and Branch routers. You must deploy **MD5 authentication** between the Hub (R1) and the Branch (R2) to secure the control plane.
 
-Furthermore, you will use **Route Tagging** to identify and track routes originating from the non-trusted Stub Network (R5) and apply **Offset Lists** to manipulate traffic flow, ensuring that high-priority security traffic is appropriately prioritized.
+Furthermore, you will use **Route Tagging** on the Hub (R1) to identify and track headquarters routes as they propagate across the domain, and apply **Offset Lists** to manipulate the metric of routes from the Stub Network (R5), demonstrating advanced EIGRP traffic engineering techniques.
 
 ### Device Role Table
 | Device | Role | Platform | Loopback0 | New in Lab 05 |
@@ -112,16 +113,19 @@ Secure the control plane communication between the Hub and the Branch.
 - Configure `key 1` with the password `SkynetSecret`.
 - Enable EIGRP MD5 authentication on the interfaces connecting R1 and R2.
 
-### Objective 2: Route Tagging for Untrusted Networks (R5)
-Identify routes coming from the R5 stub network for auditing purposes.
-- On **R3**, create a route-map to tag all routes received from **R5** with the tag `555`.
-- Apply this route-map to the EIGRP process or interface as appropriate to ensure R1 receives the tagged routes.
+### Objective 2: Route Tagging for Hub Identification (R1)
+Tag the Hub router's loopback route for identification and auditing as it propagates across the domain.
+- On **R1**, create an access-list matching `1.1.1.1/32` (the Hub loopback).
+- Create a route-map named `TAG_HQ` that matches the access-list and sets tag `111`.
+- Include a second permit clause (sequence 20) with no match to allow all other routes through untagged.
+- Apply this route-map to the EIGRP process using `distribute-list route-map TAG_HQ out FastEthernet1/0`.
+- Verify on **R5** that the tag `111` is visible using `show ip eigrp topology 1.1.1.1/32`.
 
 ### Objective 3: Traffic Engineering with Offset Lists (R1)
-Manipulate the metric of tagged routes to influence path selection.
-- On **R1**, identify routes with tag `555`.
-- Use an **Offset List** to add `500000` to the composite metric of these routes as they are received.
-- Verify that the feasible distance (FD) for these routes increases in the topology table.
+Manipulate the metric of routes from the Stub Network (R5) to influence path selection.
+- On **R1**, create an access-list matching R5's networks (`5.5.5.5/32` and `10.5.0.0/16`).
+- Use an **Offset List** to add `500000` to the composite metric of these routes as they are received on `FastEthernet1/0`.
+- Verify that the feasible distance (FD) for R5's routes increases in the topology table.
 
 ---
 
@@ -131,8 +135,8 @@ Manipulate the metric of tagged routes to influence path selection.
 |---------|------------------|
 | `show ip eigrp neighbors detail` | Verify that neighbors are authenticated and show the correct auth type. |
 | `show key chain` | Confirm key-chain configuration on R1/R2. |
-| `show ip eigrp topology <network> | include tag` | Confirm that R1 sees the tag `555` for R5's networks. |
-| `show ip eigrp topology` | Verify the increased metric for tagged routes on R1. |
+| `show ip eigrp topology 1.1.1.1/32` (on R5) | Confirm that R5 sees tag `111` for the Hub loopback (`Internal tag is 111`). |
+| `show ip eigrp topology 5.5.5.5/32` (on R1) | Verify the increased FD for R5's routes due to the offset list. |
 
 ---
 
@@ -150,36 +154,49 @@ H   Address                 Interface              Hold Uptime   SRTT   RTO  Q  
    Authentication MD5, key-chain "SKYNET_MD5"
 ```
 
-### 7.2 Verify Route Tagging & Offset Lists (R1 Perspective)
+### 7.2 Verify Route Tagging (R5 Perspective)
 ```bash
-R1# show ip eigrp topology 5.5.5.5/32
-EIGRP-IPv4 Topology Entry for AS 100 for 5.5.5.5/32
-  State is Reply Pending, Query Origin Flag is 1, 1 Successor(s), FD is 1282560
-  Descriptor Cards:
-  10.0.12.2 (FastEthernet1/0), from 10.0.12.2, Send flag is 0x0
-      Composite metric is (1282560/1024000), Route is Internal
+R5# show ip eigrp topology 1.1.1.1/32
+IP-EIGRP (AS 100): Topology entry for 1.1.1.1/32
+  State is Passive, Query origin flag is 1, 1 Successor(s), FD is 1862656
+  Routing Descriptor Blocks:
+  10.0.35.1 (FastEthernet0/0), from 10.0.35.1, Send flag is 0x0
+      Composite metric is (1862656/1837056), Route is Internal
       Vector metric:
         Minimum bandwidth is 1544 Kbit
-        Total delay is 40000 microseconds
+        Total delay is 8000 microseconds
         Reliability is 255/255
         Load is 1/255
         Minimum MTU is 1500
         Hop count is 3
-        Originating router is 5.5.5.5
-      Route tag is 555
+        Internal tag is 111
 ```
+
+### 7.3 Verify Offset List (R1 Perspective)
+The FD for R5's routes should increase by 500000 after applying the offset list.
+```bash
+R1# show ip eigrp topology 5.5.5.5/32
+EIGRP-IPv4 Topology Entry for AS(100)/ID(1.1.1.1) for 5.5.5.5/32
+  State is Passive, Query origin flag is 1, 1 Successor(s), FD is 2339616
+  Descriptor Blocks:
+  10.0.12.2 (FastEthernet1/0), from 10.0.12.2, Send flag is 0x0
+      Composite metric is (2339616/435200), route is Internal
+      ...
+```
+Note: The FD increases from `1839616` (base) to `2339616` (base + 500000 offset).
 
 ---
 
 ## 8. Troubleshooting Scenario
 
 ### The Fault
-After configuring route tagging on R3 for R5's networks, R1 reports receiving the routes but without tag `555`. The offset list on R1 is therefore having no effect on the metric.
+After configuring route tagging on R1, downstream routers (R5) report receiving the Hub loopback route (1.1.1.1/32) but without tag `111`. Separately, the offset list on R1 is not increasing the metric for R5's routes as expected.
 
 ### The Mission
-1. Verify that the route-map `TAG_R5` is correctly applied on R3.
+1. Verify that the route-map `TAG_HQ` is correctly applied on R1.
 2. Check whether the `distribute-list route-map` is active in the correct direction.
-3. Restore proper tagging and confirm that R1 sees tag `555` and the offset list applies.
+3. Verify the offset list ACL matches the correct networks.
+4. Restore proper tagging and confirm that R5 sees tag `111`, and the offset list increases R5's route metrics on R1.
 
 ---
 
@@ -218,19 +235,18 @@ interface FastEthernet0/0
 ### Objective 2: Route Tagging
 
 <details>
-<summary>Click to view R3 Configuration</summary>
+<summary>Click to view R1 Configuration</summary>
 
 ```bash
-access-list 55 permit 5.5.5.5
-access-list 55 permit 10.5.0.0 0.0.255.255
+access-list 11 permit 1.1.1.1
 !
-route-map TAG_R5 permit 10
- match ip address 55
- set tag 555
-route-map TAG_R5 permit 20
+route-map TAG_HQ permit 10
+ match ip address 11
+ set tag 111
+route-map TAG_HQ permit 20
 !
 router eigrp 100
- distribute-list route-map TAG_R5 out FastEthernet0/0
+ distribute-list route-map TAG_HQ out FastEthernet1/0
 ```
 </details>
 
@@ -240,11 +256,11 @@ router eigrp 100
 <summary>Click to view R1 Configuration</summary>
 
 ```bash
-route-map MATCH_TAG permit 10
- match tag 555
+access-list 55 permit 5.5.5.5
+access-list 55 permit 10.5.0.0 0.0.255.255
 !
 router eigrp 100
- offset-list 0 in 500000 FastEthernet1/0 route-map MATCH_TAG
+ offset-list 55 in 500000 FastEthernet1/0
 ```
 </details>
 
@@ -253,6 +269,6 @@ router eigrp 100
 ## 10. Lab Completion Checklist
 
 - [ ] MD5 Authentication active between R1 and R2.
-- [ ] R5 networks tagged with `555` on R1.
-- [ ] Offset list correctly increases metric for tagged routes on R1.
+- [ ] Hub loopback (1.1.1.1/32) tagged with `111` and visible on R5.
+- [ ] Offset list correctly increases metric for R5 routes (5.5.5.5/32) on R1.
 - [ ] Troubleshooting challenge resolved.

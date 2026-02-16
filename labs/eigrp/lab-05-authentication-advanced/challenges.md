@@ -15,19 +15,19 @@ These challenges are designed to test your diagnostic skills.
 
 ---
 
-## Challenge 2: Tagging & Offsets Gone Wrong
+## Challenge 2: Tagging Gone Missing
 **Script:** `scripts/fault_inject_2.py`
-**Symptom:** R1 is successfully receiving routes from R5, but they are not being tagged with `555`, and consequently, the Offset List is not applying the expected metric penalty.
+**Symptom:** R5 is receiving the Hub loopback route (1.1.1.1/32) from R1, but the route is **not** tagged with `111`. The `show ip eigrp topology 1.1.1.1/32` output on R5 shows no `Internal tag` line.
 
-**Goal:** Find where the tagging process is failing (likely on R3) and ensure that R1 receives the routes with the correct tag.
+**Goal:** Find where the tagging process is failing on R1 and restore the tag `111` on the Hub loopback route.
 
 ---
 
-## Challenge 3: The Phantom Penalty
+## Challenge 3: The Misguided Penalty
 **Script:** `scripts/fault_inject_3.py`
-**Symptom:** R1's offset list appears to be active, but the metric penalty is being applied to the wrong routes. Routes from R5 that should be penalized are unaffected, while other routes are unexpectedly inflated.
+**Symptom:** R1's offset list appears to be active, but the metric penalty is being applied to the wrong routes. Routes from R5 (5.5.5.5/32) that should be penalized are unaffected, while other routes are unexpectedly inflated.
 
-**Goal:** Investigate the route-map `MATCH_TAG` on R1. Determine if the tag value being matched is correct (should be `555`), and fix the mismatch.
+**Goal:** Investigate the offset list ACL on R1. Determine if the access-list is matching the correct networks, and fix the mismatch.
 
 ---
 
@@ -70,96 +70,98 @@ The neighbor adjacency should re-establish and show MD5 authentication active.
 
 ---
 
-### Challenge 2: Tagging & Offsets Gone Wrong — Solution
+### Challenge 2: Tagging Gone Missing — Solution
 
-**Symptom:** R1 is successfully receiving routes from R5, but they are not being tagged with `555`, and consequently, the Offset List is not applying the expected metric penalty.
+**Symptom:** R5 is receiving the Hub loopback route (1.1.1.1/32) but it is not tagged with `111`.
 
-**Root Cause:** The `distribute-list route-map TAG_R5 out` was removed from the EIGRP router configuration on R3, preventing the route-map from being applied to routes sent to R1.
+**Root Cause:** The `distribute-list route-map TAG_HQ out FastEthernet1/0` was removed from R1's EIGRP router configuration, preventing the route-map from tagging routes sent to downstream routers.
 
 **Solution:**
 
-On **R3**, re-apply the distribute-list route-map configuration:
+On **R1**, re-apply the distribute-list route-map configuration:
 
 ```bash
-R3# configure terminal
-R3(config)# router eigrp 100
-R3(config-router)# distribute-list route-map TAG_R5 out FastEthernet0/0
-R3(config-router)# exit
-R3(config)# end
-R3# write memory
+R1# configure terminal
+R1(config)# router eigrp 100
+R1(config-router)# distribute-list route-map TAG_HQ out FastEthernet1/0
+R1(config-router)# end
+R1# write memory
 ```
 
 **Verification:**
 
-Verify on **R1** that the routes from R5 are now tagged with `555`:
+Verify on **R1** that the distribute-list and route-map are in place:
 
 ```bash
-R1# show ip eigrp topology 5.5.5.5/32
-EIGRP-IPv4 Topology Entry for AS 100 for 5.5.5.5/32
-  State is Reply Pending, Query origin flag is 1, 1 Successor(s), FD is 1282560
-  Descriptor Cards:
-  10.0.12.2 (FastEthernet1/0), from 10.0.12.2, Send flag is 0x0
-      Composite metric is (1282560/1024000), Route is Internal
-      Vector metric:
-        ...
-        Route tag is 555
+R1# show run | section router eigrp
+router eigrp 100
+ ...
+ distribute-list route-map TAG_HQ out FastEthernet1/0
+
+R1# show route-map TAG_HQ
+route-map TAG_HQ, permit, sequence 10
+  Match clauses:
+    ip address 11
+  Set clauses:
+    tag 111
+  Policy routing matches: 0 packets, 0 bytes
+route-map TAG_HQ, permit, sequence 20
+  Match clauses:
+  Set clauses:
+  Policy routing matches: 0 packets, 0 bytes
 ```
 
-The tag `555` should now appear in the topology table. Verify the offset list is applying:
+Verify on **R5** that the tag is now visible:
 
 ```bash
-R1# show ip eigrp topology 5.5.5.5/32 | include "Composite metric"
-Composite metric is (1782560/1024000), route is Internal
+R5# show ip eigrp topology 1.1.1.1/32
+IP-EIGRP (AS 100): Topology entry for 1.1.1.1/32
+  ...
+        Internal tag is 111
 ```
-
-The composite metric should be increased by 500000 due to the offset list (1024000 + 500000 = 1524000 for the second value, reflecting the offset applied).
 
 ---
 
-### Challenge 3: The Phantom Penalty — Solution
+### Challenge 3: The Misguided Penalty — Solution
 
-**Symptom:** R1's offset list appears to be active, but the metric penalty is being applied to the wrong routes. Routes from R5 that should be penalized are unaffected, while other routes are unexpectedly inflated.
+**Symptom:** R1's offset list is applying the metric penalty to the wrong routes. R5 routes (5.5.5.5/32) are unaffected, while other routes are unexpectedly inflated.
 
-**Root Cause:** The route-map `MATCH_TAG` on R1 was modified to match tag `999` instead of the correct tag value `555`. Since R5 routes are tagged with `555`, they don't match the route-map and the offset list isn't applied to them.
+**Root Cause:** The offset list ACL 55 on R1 was modified to match `3.3.3.3` (R3's loopback) instead of the correct R5 networks (`5.5.5.5` and `10.5.0.0 0.0.255.255`). This causes the offset to penalize R3's routes instead of R5's.
 
 **Solution:**
 
-On **R1**, correct the tag value in the MATCH_TAG route-map:
+On **R1**, correct the access-list to match R5's networks:
 
 ```bash
 R1# configure terminal
-R1(config)# route-map MATCH_TAG permit 10
-R1(config-route-map)# no match tag 999
-R1(config-route-map)# match tag 555
-R1(config-route-map)# exit
+R1(config)# no access-list 55
+R1(config)# access-list 55 permit 5.5.5.5
+R1(config)# access-list 55 permit 10.5.0.0 0.0.255.255
 R1(config)# end
 R1# write memory
 ```
 
 **Verification:**
 
-Verify the corrected route-map configuration:
+Verify the corrected ACL:
 
 ```bash
-R1# show route-map MATCH_TAG
-route-map MATCH_TAG, permit, sequence 10
-  Match clauses:
-    tag 555
-  Set clauses:
-  Policy routing matches: 0 packets, 0 bytes
+R1# show access-lists 55
+Standard IP access list 55
+    10 permit 5.5.5.5
+    20 permit 10.5.0.0, wildcard bits 0.0.255.255
 ```
 
-Verify that the offset list is now correctly applied to routes tagged with `555`:
+Verify that the offset list is now applied to R5's routes:
 
 ```bash
 R1# show ip eigrp topology 5.5.5.5/32
-EIGRP-IPv4 Topology Entry for AS 100 for 5.5.5.5/32
-  State is Reply Pending, Query origin flag is 1, 1 Successor(s), FD is 1782560
-  Descriptor Cards:
+EIGRP-IPv4 Topology Entry for AS(100)/ID(1.1.1.1) for 5.5.5.5/32
+  State is Passive, Query origin flag is 1, 1 Successor(s), FD is 2339616
+  Descriptor Blocks:
   10.0.12.2 (FastEthernet1/0), from 10.0.12.2, Send flag is 0x0
-      Composite metric is (1782560/1024000), Route is Internal
+      Composite metric is (2339616/435200), route is Internal
       ...
-      Route tag is 555
 ```
 
-The composite metric should now include the offset penalty (1024000 + 500000 = 1524000 for the second value). Other routes not tagged with `555` should return to their original metrics without the penalty.
+The FD should be `2339616` (base `1839616` + offset `500000`). R3's routes (3.3.3.3/32) should return to their normal metric without the penalty.

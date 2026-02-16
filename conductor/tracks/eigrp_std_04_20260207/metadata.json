@@ -1,8 +1,0 @@
-{
-  "track_id": "eigrp_std_04_20260207",
-  "type": "feature",
-  "status": "completed",
-  "created_at": "2026-02-07T12:00:00Z",
-  "updated_at": "2026-02-07T17:40:00Z",
-  "description": "Standardize EIGRP Lab 04: Stub & WAN Optimization"
-}

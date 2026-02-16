@@ -4,7 +4,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Implement OSPF Lab 04: Multi-Area OSPF**
+- [~] **Track: Implement OSPF Lab 04: Multi-Area OSPF**
   *Link: [./tracks/ospf_std_04_20260207/](./tracks/ospf_std_04_20260207/)*
 
 ---

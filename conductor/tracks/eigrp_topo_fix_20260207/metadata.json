@@ -1,8 +1,0 @@
-{
-  "track_id": "eigrp_topo_fix_20260207",
-  "type": "fix",
-  "status": "pending",
-  "created_at": "2026-02-07T18:50:00Z",
-  "updated_at": "2026-02-07T18:50:00Z",
-  "description": "Fix EIGRP Lab Topology Diagrams (04-09)"
-}
