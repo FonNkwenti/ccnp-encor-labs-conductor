@@ -11,6 +11,7 @@
 - [x] Task: Generate `initial-configs/` from Lab 03 solutions. 6cda51e
 - [x] Task: Draft `workbook.md` following "Challenge-First" format. 6c85c19
 - [x] Task: Implement full `solutions/` configurations. 7794547
+- [x] Task: Create automation scripts (`setup_lab.py`, `refresh_lab.py`). 8a06d02
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Verification & Quality Assurance
