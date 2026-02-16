@@ -9,8 +9,7 @@ This script connects to all active devices and applies the
 correct configuration from the lab solutions.
 """
 
-import telnetlib
-import time
+from netmiko import ConnectHandler
 import sys
 
 # Device Console Mappings
@@ -23,7 +22,6 @@ DEVICES = {
 # Correct EIGRP Configuration per Device
 CONFIGS = {
     "R1": [
-        "configure terminal",
         "no router eigrp 200",  # Remove any wrong AS
         "router eigrp 100",
         "eigrp router-id 1.1.1.1",
@@ -31,11 +29,8 @@ CONFIGS = {
         "network 10.0.12.0 0.0.0.3",
         "passive-interface Loopback0",
         "no auto-summary",
-        "end",
-        "write memory",
     ],
     "R2": [
-        "configure terminal",
         "no router eigrp 200",  # Remove any wrong AS
         "router eigrp 100",
         "eigrp router-id 2.2.2.2",
@@ -44,11 +39,8 @@ CONFIGS = {
         "network 10.0.23.0 0.0.0.3",
         "passive-interface Loopback0",
         "no auto-summary",
-        "end",
-        "write memory",
     ],
     "R3": [
-        "configure terminal",
         "router eigrp 100",
         "no passive-interface default",  # Remove passive default
         "eigrp router-id 3.3.3.3",
@@ -56,8 +48,6 @@ CONFIGS = {
         "network 10.0.23.0 0.0.0.3",
         "passive-interface Loopback0",
         "no auto-summary",
-        "end",
-        "write memory",
     ],
 }
 
@@ -65,31 +55,31 @@ def restore_device(device_name, config):
     """Restore a single device to correct configuration."""
     host = DEVICES[device_name]["host"]
     port = DEVICES[device_name]["port"]
-    
+
     print(f"\n[*] Restoring {device_name} ({host}:{port})...")
-    
+
     try:
-        tn = telnetlib.Telnet(host, port, timeout=10)
+        conn = ConnectHandler(
+            device_type="cisco_ios_telnet",
+            host=host,
+            port=port,
+            username="",
+            password="",
+            secret="",
+            timeout=10,
+        )
         print(f"[+] Connected to {device_name}")
-        
-        # Press Enter to get prompt
-        tn.write(b"\n")
-        time.sleep(1)
-        
-        # Enter enable mode
-        tn.write(b"enable\n")
-        time.sleep(1)
-        
-        # Apply correct configuration
-        for cmd in config:
-            print(f"    {cmd}")
-            tn.write(f"{cmd}\n".encode('ascii'))
-            time.sleep(0.5)
-        
+
+        output = conn.send_config_set(config)
+        print(output)
+
+        output = conn.save_config()
+        print(output)
+
         print(f"[+] {device_name} restored successfully!")
-        tn.close()
+        conn.disconnect()
         return True
-        
+
     except ConnectionRefusedError:
         print(f"[!] Error: Could not connect to {device_name} at {host}:{port}")
         print(f"[!] Make sure GNS3 is running and {device_name} is started.")
@@ -103,20 +93,20 @@ def main():
     print("="*60)
     print("Solution Restoration: Removing All Faults")
     print("="*60)
-    
+
     success_count = 0
     fail_count = 0
-    
+
     for device_name, config in CONFIGS.items():
         if restore_device(device_name, config):
             success_count += 1
         else:
             fail_count += 1
-    
+
     print("\n" + "="*60)
     print(f"Restoration Complete: {success_count} succeeded, {fail_count} failed")
     print("="*60)
-    
+
     if fail_count > 0:
         print("[!] Some devices could not be restored. Check GNS3 and try again.")
         sys.exit(1)

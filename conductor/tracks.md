@@ -94,7 +94,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Troubleshooting & Fault-Injection Synchronization (EIGRP & OSPF)**
+- [x] **Track: Troubleshooting & Fault-Injection Synchronization (EIGRP & OSPF)**
   *Link: [./tracks/ccnp_troubleshooting_sync_20260210/](./tracks/ccnp_troubleshooting_sync_20260210/)*
 
 ---

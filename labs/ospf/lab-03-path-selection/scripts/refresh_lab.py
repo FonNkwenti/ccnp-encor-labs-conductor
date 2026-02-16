@@ -1,80 +1,17 @@
 import sys
 import os
-import socket
-import time
 
-# Add common tools to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../common/tools')))
-
-class LabRefresher:
-    def __init__(self, devices):
-        self.devices = devices  # List of (name, port, config_path)
-
-    def _parse_cleanup_commands(self, config_file):
-        """Parse config to find interfaces and routing protocols to reset."""
-        interfaces = []
-        routers = []
-        with open(config_file, 'r') as f:
-            for line in f:
-                stripped = line.strip()
-                if stripped.startswith('interface '):
-                    interfaces.append(stripped.split(' ', 1)[1])
-                elif stripped.startswith('router '):
-                    routers.append(stripped)
-        cleanup = []
-        for iface in interfaces:
-            cleanup.append(f"default interface {iface}")
-        for router in routers:
-            cleanup.append(f"no {router}")
-        return cleanup
-
-    def push_config(self, host, port, config_file):
-        print(f"Refreshing {host}:{port} with {config_file}...")
-        try:
-            tn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tn.settimeout(5)
-            tn.connect((host, port))
-            tn.sendall(b"\r\n")
-            time.sleep(0.5)
-            tn.sendall(b"enable\r\n")
-            time.sleep(0.3)
-            tn.sendall(b"configure terminal\r\n")
-            time.sleep(0.3)
-
-            # Default all interfaces and remove routing protocols
-            cleanup = self._parse_cleanup_commands(config_file)
-            for cmd in cleanup:
-                tn.sendall(cmd.encode('ascii') + b"\r\n")
-                time.sleep(0.3)
-
-            # Push initial config
-            with open(config_file, 'r') as f:
-                for line in f:
-                    if line.strip() and not line.startswith('!'):
-                        tn.sendall(line.strip().encode('ascii') + b"\r\n")
-                        time.sleep(0.1)
-
-            tn.sendall(b"end\r\n")
-            time.sleep(0.2)
-            tn.sendall(b"write memory\r\n")
-            tn.close()
-            print(f"  Successfully refreshed.")
-            return True
-        except Exception as e:
-            print(f"  Failed: {e}")
-            return False
-
-    def run(self):
-        for name, port, config in self.devices:
-            config_path = os.path.join(os.path.dirname(__file__), "..", config)
-            self.push_config("127.0.0.1", port, config_path)
+from lab_utils import LabRefresher
 
 if __name__ == "__main__":
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    lab_dir = os.path.join(script_dir, "..")
     devices = [
-        ("R1", 5001, "initial-configs/R1.cfg"),
-        ("R2", 5002, "initial-configs/R2.cfg"),
-        ("R3", 5003, "initial-configs/R3.cfg")
+        ("R1", 5001, os.path.join(lab_dir, "initial-configs/R1.cfg")),
+        ("R2", 5002, os.path.join(lab_dir, "initial-configs/R2.cfg")),
+        ("R3", 5003, os.path.join(lab_dir, "initial-configs/R3.cfg")),
     ]
     refresher = LabRefresher(devices)
     refresher.run()
-    print("\nOSPF Lab 03 has been refreshed to the initial config state.")
+    print("\nOSPF Lab 03 has been refreshed.")

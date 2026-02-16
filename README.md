@@ -18,7 +18,8 @@ A comprehensive set of hands-on labs for the Cisco CCNP ENCOR (350-401) exam.
 
 1. Set up GNS3 on Apple M1 (see `.agent/skills/gns3/SKILL.md` for constraints)
 2. Load Cisco IOS images (c3725, c7200)
-3. Navigate to a lab and follow the workbook
+3. Install Python dependencies: `pip install -r requirements.txt`
+4. Navigate to a lab and follow the workbook
 
 ## Development
 

@@ -6,7 +6,8 @@ This directory contains automated fault injection scripts for troubleshooting pr
 
 - **GNS3 project must be running** with all devices started
 - All devices must be accessible via their console ports
-- Python 3.x installed (scripts use `telnetlib` module)
+- Python 3.x installed
+- `netmiko` library installed (`pip install netmiko`)
 
 ## ⚠️ Important Notes
 

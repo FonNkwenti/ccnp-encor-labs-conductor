@@ -11,56 +11,51 @@ then incorrectly excludes Loopback0 instead of the transit interface, preventing
 adjacency formation with R2.
 """
 
-import telnetlib
-import time
+from netmiko import ConnectHandler
 import sys
 
 # Device Configuration
 DEVICE_NAME = "R3"
 CONSOLE_HOST = "127.0.0.1"
 CONSOLE_PORT = 5003
-TIMEOUT = 10
 
 # Fault Configuration Commands
 FAULT_COMMANDS = [
-    "configure terminal",
     "router eigrp 100",
     "passive-interface default",
     "no passive-interface Loopback0",
-    "end",
-    "write memory",
 ]
 
 def inject_fault():
     """Connect to device and inject the fault configuration."""
-    print(f"[*] Connecting to {DEVICE_NAME} on {CONSOLE_HOST}:{CONSOLE_PORT}...")
-    
+    print(f"[*] Connecting to {DEVICE_NAME}...")
+
     try:
-        tn = telnetlib.Telnet(CONSOLE_HOST, CONSOLE_PORT, TIMEOUT)
+        conn = ConnectHandler(
+            device_type="cisco_ios_telnet",
+            host=CONSOLE_HOST,
+            port=CONSOLE_PORT,
+            username="",
+            password="",
+            secret="",
+            timeout=10,
+        )
         print(f"[+] Connected to {DEVICE_NAME}")
-        
-        # Press Enter to get prompt
-        tn.write(b"\n")
-        time.sleep(1)
-        
-        # Enter enable mode
-        tn.write(b"enable\n")
-        time.sleep(1)
-        
-        # Apply fault commands
+
         print(f"[*] Injecting fault configuration...")
         print(f"[*] Configuring passive-interface default (FAULT)")
-        for cmd in FAULT_COMMANDS:
-            print(f"    {cmd}")
-            tn.write(f"{cmd}\n".encode('ascii'))
-            time.sleep(0.5)
-        
+        output = conn.send_config_set(FAULT_COMMANDS)
+        print(output)
+
+        output = conn.save_config()
+        print(output)
+
+        conn.disconnect()
+
         print(f"[+] Fault injected successfully on {DEVICE_NAME}!")
         print(f"[!] Troubleshooting Scenario 2: Passive Interface Misconfiguration is now active.")
         print(f"[!] R3 will NOT form adjacency with R2 (all interfaces passive)")
-        
-        tn.close()
-        
+
     except ConnectionRefusedError:
         print(f"[!] Error: Could not connect to {CONSOLE_HOST}:{CONSOLE_PORT}")
         print(f"[!] Make sure GNS3 is running and {DEVICE_NAME} is started.")

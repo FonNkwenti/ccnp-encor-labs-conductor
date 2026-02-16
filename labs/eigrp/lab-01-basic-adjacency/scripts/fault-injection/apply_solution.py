@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Solution Restoration Script Template
+Solution Restoration Script
 
 Restores all devices to their correct EIGRP configuration,
 removing all injected faults from troubleshooting scenarios.
@@ -9,34 +9,32 @@ This script connects to all active devices and applies the
 correct configuration from the lab solutions.
 """
 
-import socket
-import time
 import sys
+import os
 
-# Device Console Mappings
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../common/tools')))
+from fault_utils import FaultInjector
+
+# Device Console Port Mappings
 DEVICES = {
-    "R1": {"host": "127.0.0.1", "port": 5001},
-    "R2": {"host": "127.0.0.1", "port": 5002},
-    "R3": {"host": "127.0.0.1", "port": 5003},
+    "R1": 5001,
+    "R2": 5002,
+    "R3": 5003,
 }
 
-# Correct EIGRP Configuration per Device
+# Correct EIGRP Configuration per Device (config-mode commands only)
 CONFIGS = {
     "R1": [
-        "configure terminal",
-        "no router eigrp 200",  # Remove any wrong AS
+        "no router eigrp 200",
         "router eigrp 100",
         "eigrp router-id 1.1.1.1",
         "network 1.1.1.1 0.0.0.0",
         "network 10.0.12.0 0.0.0.3",
         "passive-interface Loopback0",
         "no auto-summary",
-        "end",
-        "write memory",
     ],
     "R2": [
-        "configure terminal",
-        "no router eigrp 200",  # Remove any wrong AS
+        "no router eigrp 200",
         "router eigrp 100",
         "eigrp router-id 2.2.2.2",
         "network 2.2.2.2 0.0.0.0",
@@ -44,87 +42,54 @@ CONFIGS = {
         "network 10.0.23.0 0.0.0.3",
         "passive-interface Loopback0",
         "no auto-summary",
-        "end",
-        "write memory",
     ],
     "R3": [
-        "configure terminal",
         "router eigrp 100",
-        "no passive-interface default",  # Remove passive default
+        "no passive-interface default",
         "eigrp router-id 3.3.3.3",
         "network 3.3.3.3 0.0.0.0",
         "network 10.0.23.0 0.0.0.3",
         "passive-interface Loopback0",
         "no auto-summary",
-        "end",
-        "write memory",
     ],
 }
 
-def restore_device(device_name, config):
-    """Restore a single device to correct configuration."""
-    host = DEVICES[device_name]["host"]
-    port = DEVICES[device_name]["port"]
-    
-    print(f"\n[*] Restoring {device_name} ({host}:{port})...")
-    
-    try:
-        tn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tn.settimeout(5)
-        tn.connect((host, port))
-        print(f"[+] Connected to {device_name}")
-        
-        # Press Enter to get prompt
-        tn.sendall(b"\r\n")
-        time.sleep(1)
-        
-        # Enter enable mode
-        tn.sendall(b"enable\n")
-        time.sleep(1)
-        
-        # Apply correct configuration
-        for cmd in config:
-            print(f"    {cmd}")
-            tn.sendall(f"{cmd}\n".encode('ascii'))
-            time.sleep(0.5)
-        
-        print(f"[+] {device_name} restored successfully!")
-        tn.close()
-        return True
-        
-    except ConnectionRefusedError:
-        print(f"[!] Error: Could not connect to {device_name} at {host}:{port}")
-        print(f"[!] Make sure GNS3 is running and {device_name} is started.")
-        return False
-    except Exception as e:
-        print(f"[!] Error on {device_name}: {e}")
-        return False
 
 def main():
     """Restore all devices to correct configuration."""
-    print("="*60)
+    print("=" * 60)
     print("Solution Restoration: Removing All Faults")
-    print("="*60)
-    
+    print("=" * 60)
+
+    injector = FaultInjector()
     success_count = 0
     fail_count = 0
-    
-    for device_name, config in CONFIGS.items():
-        if restore_device(device_name, config):
+
+    for device_name, port in DEVICES.items():
+        print(f"\n[*] Restoring {device_name} (port {port})...")
+        success = injector.execute_commands(
+            port,
+            CONFIGS[device_name],
+            f"Restore {device_name}"
+        )
+        if success:
+            print(f"[+] {device_name} restored successfully!")
             success_count += 1
         else:
+            print(f"[!] Failed to restore {device_name}.")
             fail_count += 1
-    
-    print("\n" + "="*60)
+
+    print("\n" + "=" * 60)
     print(f"Restoration Complete: {success_count} succeeded, {fail_count} failed")
-    print("="*60)
-    
+    print("=" * 60)
+
     if fail_count > 0:
         print("[!] Some devices could not be restored. Check GNS3 and try again.")
         sys.exit(1)
     else:
         print("[+] All devices restored to correct configuration!")
         print("[+] Lab is ready for normal operation.")
+
 
 if __name__ == "__main__":
     main()

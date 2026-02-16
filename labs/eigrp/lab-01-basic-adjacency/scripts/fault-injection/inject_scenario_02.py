@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fault Injection Script Template: Passive Interface Misconfiguration
+Fault Injection Script: Passive Interface Misconfiguration
 
 Injects: Passive Interface Default with Wrong Exclusion
 Target Device: R3
@@ -11,69 +11,48 @@ then incorrectly excludes Loopback0 instead of the transit interface, preventing
 adjacency formation with R2.
 """
 
-import socket
-import time
 import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../common/tools')))
+from fault_utils import FaultInjector
 
 # Device Configuration
 DEVICE_NAME = "R3"
-CONSOLE_HOST = "127.0.0.1"
 CONSOLE_PORT = 5003
-TIMEOUT = 10
 
-# Fault Configuration Commands
+# Fault Configuration Commands (config-mode commands only)
 FAULT_COMMANDS = [
-    "configure terminal",
     "router eigrp 100",
     "passive-interface default",
     "no passive-interface Loopback0",
-    "end",
-    "write memory",
 ]
+
 
 def inject_fault():
     """Connect to device and inject the fault configuration."""
-    print(f"[*] Connecting to {DEVICE_NAME} on {CONSOLE_HOST}:{CONSOLE_PORT}...")
-    
-    try:
-        tn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tn.settimeout(5)
-        tn.connect((CONSOLE_HOST, CONSOLE_PORT))
-        print(f"[+] Connected to {DEVICE_NAME}")
-        
-        # Press Enter to get prompt
-        tn.sendall(b"\r\n")
-        time.sleep(1)
-        
-        # Enter enable mode
-        tn.sendall(b"enable\n")
-        time.sleep(1)
-        
-        # Apply fault commands
-        print(f"[*] Injecting fault configuration...")
-        print(f"[*] Configuring passive-interface default (FAULT)")
-        for cmd in FAULT_COMMANDS:
-            print(f"    {cmd}")
-            tn.sendall(f"{cmd}\n".encode('ascii'))
-            time.sleep(0.5)
-        
+    print(f"[*] Injecting fault on {DEVICE_NAME} (port {CONSOLE_PORT})...")
+    print(f"[*] Configuring passive-interface default (FAULT)")
+
+    injector = FaultInjector()
+    success = injector.execute_commands(
+        CONSOLE_PORT,
+        FAULT_COMMANDS,
+        "Scenario 2: Passive Interface Misconfiguration"
+    )
+
+    if success:
         print(f"[+] Fault injected successfully on {DEVICE_NAME}!")
         print(f"[!] Troubleshooting Scenario 2: Passive Interface Misconfiguration is now active.")
         print(f"[!] R3 will NOT form adjacency with R2 (all interfaces passive)")
-        
-        tn.close()
-        
-    except ConnectionRefusedError:
-        print(f"[!] Error: Could not connect to {CONSOLE_HOST}:{CONSOLE_PORT}")
-        print(f"[!] Make sure GNS3 is running and {DEVICE_NAME} is started.")
-        sys.exit(1)
-    except Exception as e:
-        print(f"[!] Error: {e}")
+    else:
+        print(f"[!] Failed to inject fault on {DEVICE_NAME}.")
         sys.exit(1)
 
+
 if __name__ == "__main__":
-    print("="*60)
+    print("=" * 60)
     print("Fault Injection: Passive Interface Misconfiguration")
-    print("="*60)
+    print("=" * 60)
     inject_fault()
-    print("="*60)
+    print("=" * 60)

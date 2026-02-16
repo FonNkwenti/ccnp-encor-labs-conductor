@@ -1,36 +1,37 @@
-import socket
-import time
-import sys
+from netmiko import ConnectHandler
+
 
 class FaultInjector:
     def __init__(self, host="127.0.0.1"):
         self.host = host
 
+    def _connect(self, port):
+        """Create a Netmiko connection to a GNS3 console port."""
+        device = {
+            "device_type": "cisco_ios_telnet",
+            "host": self.host,
+            "port": port,
+            "username": "",
+            "password": "",
+            "secret": "",
+            "timeout": 10,
+        }
+        return ConnectHandler(**device)
+
     def execute_commands(self, port, commands, description="Injecting fault"):
         """
-        Connects to a GNS3 console via raw socket and executes IOS
-        configuration commands.  Identical pattern to refresh_lab.py.
+        Connects to a GNS3 console via Netmiko and executes IOS
+        configuration commands.
         """
         try:
-            tn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tn.settimeout(5)
-            tn.connect((self.host, port))
-            tn.sendall(b"\r\n")
-            time.sleep(0.5)
-            tn.sendall(b"enable\r\n")
-            tn.sendall(b"configure terminal\r\n")
-
-            for cmd in commands:
-                if cmd.strip():
-                    tn.sendall(cmd.strip().encode('ascii') + b"\r\n")
-                    time.sleep(0.1)
-
-            tn.sendall(b"end\r\n")
-            tn.close()
+            conn = self._connect(port)
+            output = conn.send_config_set(commands)
+            conn.disconnect()
             return True
         except Exception as e:
             print(f"  Error: {e}")
             return False
+
 
 if __name__ == "__main__":
     injector = FaultInjector()

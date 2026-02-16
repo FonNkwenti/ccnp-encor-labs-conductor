@@ -37,9 +37,9 @@ labs/[chapter]/[lab-XX]/
 ## Script Requirements
 
 ### Each Fault Injection Script Must:
-1. **Connect via Telnet**: Use `telnetlib` to connect to localhost:[console_port]
-2. **Handle IOS CLI**: Navigate through enable mode, config mode
-3. **Apply Fault Configuration**: Inject the specific misconfiguration
+1. **Connect via Netmiko**: Use `ConnectHandler` with `device_type="cisco_ios_telnet"` to connect to localhost:[console_port]
+2. **Handle IOS CLI**: Netmiko handles enable mode, config mode, and command timing automatically
+3. **Apply Fault Configuration**: Use `send_config_set()` to inject the specific misconfiguration
 4. **Provide Feedback**: Clear console output showing progress
 5. **Error Handling**: Gracefully handle connection failures
 6. **Self-Documenting**: Include docstring explaining what fault is injected
@@ -54,23 +54,20 @@ Injects: [Description of fault]
 Target Device: [Device name]
 Fault Type: [Category - e.g., AS Mismatch, Passive Interface, etc.]
 
-This script connects to the device via console and applies the 
+This script connects to the device via console and applies the
 misconfiguration described in Troubleshooting Scenario X.
 """
 
-import telnetlib
-import time
+from netmiko import ConnectHandler
 import sys
 
 # Device Configuration
 DEVICE_NAME = "R2"
 CONSOLE_HOST = "127.0.0.1"
 CONSOLE_PORT = 5002
-TIMEOUT = 10
 
 # Fault Configuration Commands
 FAULT_COMMANDS = [
-    "configure terminal",
     "no router eigrp 100",
     "router eigrp 200",
     "eigrp router-id 2.2.2.2",
@@ -79,36 +76,30 @@ FAULT_COMMANDS = [
 
 def inject_fault():
     """Connect to device and inject the fault configuration."""
-    print(f"[*] Connecting to {DEVICE_NAME} on {CONSOLE_HOST}:{CONSOLE_PORT}...")
-    
+    print(f"[*] Connecting to {DEVICE_NAME}...")
+
     try:
-        tn = telnetlib.Telnet(CONSOLE_HOST, CONSOLE_PORT, TIMEOUT)
+        conn = ConnectHandler(
+            device_type="cisco_ios_telnet",
+            host=CONSOLE_HOST,
+            port=CONSOLE_PORT,
+            username="",
+            password="",
+            secret="",
+            timeout=10,
+        )
         print(f"[+] Connected to {DEVICE_NAME}")
-        
-        # Press Enter to get prompt
-        tn.write(b"\n")
-        time.sleep(1)
-        
-        # Enter enable mode
-        tn.write(b"enable\n")
-        time.sleep(1)
-        
+
         # Apply fault commands
         print(f"[*] Injecting fault configuration...")
-        for cmd in FAULT_COMMANDS:
-            print(f"    {cmd}")
-            tn.write(f"{cmd}\n".encode('ascii'))
-            time.sleep(0.5)
-        
-        # Exit config mode
-        tn.write(b"end\n")
-        time.sleep(0.5)
-        
+        output = conn.send_config_set(FAULT_COMMANDS)
+        print(output)
+
+        conn.disconnect()
+
         print(f"[+] Fault injected successfully on {DEVICE_NAME}!")
         print(f"[!] Troubleshooting Scenario X is now active.")
-        
-        tn.close()
-        
+
     except Exception as e:
         print(f"[!] Error: {e}")
         sys.exit(1)
@@ -134,6 +125,7 @@ This directory contains automated fault injection scripts for troubleshooting pr
 - GNS3 project must be running
 - All devices must be accessible via console ports
 - Python 3.x installed
+- `netmiko` library installed (`pip install netmiko`)
 
 ## Available Scenarios
 
@@ -237,7 +229,7 @@ Scripts should handle:
 - Connection timeouts
 - Device not responding
 - Invalid console ports
-- Telnet authentication (if configured)
+- Netmiko authentication exceptions
 - IOS command errors
 
 ## Best Practices

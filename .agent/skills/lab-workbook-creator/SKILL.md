@@ -1,6 +1,6 @@
 ---
 name: lab-workbook-creator
-description: Creates detailed lab workbooks and automation scripts for loading initial configs into GNS3 routers via console telnet.
+description: Creates detailed lab workbooks and automation scripts for loading initial configs into GNS3 routers via Netmiko telnet.
 ---
 
 # Lab Workbook Creator Skill
@@ -20,7 +20,7 @@ The output will be a comprehensive set of files:
 2.  **initial-configs/** - Starting configs.
 3.  **solutions/** - Complete configs.
 4.  **topology.drawio** - Visual diagram. **Must follow the drawio style guide** (see `.agent/skills/drawio/SKILL.md` Section 4).
-5.  **setup_lab.py** - (NEW) Python automation script to load initial-configs via Telnet.
+5.  **setup_lab.py** - (NEW) Python automation script to load initial-configs via Netmiko.
 
 ## Topology Diagram Requirements
 When generating `topology.drawio`, strictly follow the **Visual Style Guide** in `.agent/skills/drawio/SKILL.md`:
@@ -33,11 +33,11 @@ When generating `topology.drawio`, strictly follow the **Visual Style Guide** in
 
 ## Automation Script Requirements (setup_lab.py)
 The script must:
-1.  Use the `telnetlib` (or `telnetlib3`) to connect to the console ports defined in `baseline.yaml` or the workbook's Console Access Table.
+1.  Use `netmiko` with `device_type='cisco_ios_telnet'` to connect to the console ports defined in `baseline.yaml` or the workbook's Console Access Table.
 2.  Loop through each active router in the lab.
 3.  Load the corresponding `.cfg` file from `initial-configs/`.
 4.  Provide a progress bar or clear logging for each device.
-5.  Handle the "Enter" prompt and basic IOS CLI "config t" mode transitions.
+5.  Let Netmiko handle IOS CLI mode transitions automatically.
 
 ## Prompt Template
 
@@ -55,7 +55,7 @@ You are a CCNP ENCOR lab developer. Create a detailed lab workbook and setup scr
    - Lab objectives and links.
 2. Generate all standard workbook sections.
 3. **NEW: Generate setup_lab.py**
-   - Implement a clean Python script using telnet to push initial-configs.
+   - Implement a clean Python script using Netmiko (`device_type='cisco_ios_telnet'`) to push initial-configs.
    - Script should target localhost:[console_port].
    - Include a 'reset' logic: send 'erase startup-config', 'reload', or simply overwrite running-config.
 
