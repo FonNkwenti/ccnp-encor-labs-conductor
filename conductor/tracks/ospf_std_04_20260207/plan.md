@@ -3,7 +3,7 @@
 ## Phase 1: Lab Design & Topology
 - [x] Task: Review `labs/ospf/baseline.yaml` for Lab 04 requirements.
 - [x] Task: Design Skynet Global scenario narrative for OSPF Lab 04.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Design' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Design' (Protocol in workflow.md) [verified]
 
 ## Phase 2: Workbook & Config Implementation
 - [ ] Task: Initialize lab directory `labs/ospf/lab-04-*/`.
