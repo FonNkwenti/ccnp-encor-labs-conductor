@@ -1,6 +1,11 @@
 ---
 name: fault-injector
-description: Generates Python scripts to inject troubleshooting faults into lab environments based on workbook scenarios.
+description: Generates Python fault-injection scripts (inject_scenario_NN.py, apply_solution.py) and a README that push Cisco misconfigurations into live GNS3 routers via Netmiko telnet for troubleshooting practice. Use when asked to "inject faults", "create troubleshooting scenarios", "generate fault scripts", "add a troubleshooting challenge", or automatically after lab-workbook-creator completes a lab.
+metadata:
+  author: CCNP ENCOR Labs Conductor
+  version: 2.0.0
+  category: workflow-automation
+  tags: [ccnp, encor, gns3, cisco, troubleshooting, netmiko, fault-injection]
 ---
 
 # Fault Injector Skill

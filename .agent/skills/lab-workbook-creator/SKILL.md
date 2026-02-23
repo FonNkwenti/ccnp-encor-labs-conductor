@@ -1,6 +1,11 @@
 ---
 name: lab-workbook-creator
-description: Creates detailed lab workbooks and automation scripts for loading initial configs into GNS3 routers via Netmiko telnet.
+description: Generates the complete DeepSeek Standard lab artifact set for CCNP ENCOR GNS3 labs: workbook.md, initial-configs/, solutions/, topology.drawio, and setup_lab.py automation script via Netmiko telnet. Use when asked to "create a lab", "build lab N", "generate a workbook", "make a lab for [topic]", "build the lab files", or "generate the CCNP ENCOR lab for [chapter]".
+metadata:
+  author: CCNP ENCOR Labs Conductor
+  version: 2.0.0
+  category: document-creation
+  tags: [ccnp, encor, gns3, cisco, lab, workbook, netmiko, dynamips]
 ---
 
 # Lab Workbook Creator Skill

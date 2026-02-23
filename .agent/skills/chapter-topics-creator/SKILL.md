@@ -1,6 +1,11 @@
 ---
 name: chapter-topics-creator
-description: Generates a comprehensive set of lab topics/scenarios for a specific CCNP ENCOR technology chapter, ensuring complete blueprint coverage and creating the baseline.yaml.
+description: Creates the lab topics blueprint, CCNP 350-401 exam coverage matrix, and baseline.yaml topology definition for a new chapter. Use when starting a new chapter, asked to "plan the labs", "design the lab series", "create baseline.yaml", "what labs should I build for OSPF", "generate the chapter plan for [technology]", or "scaffold a new chapter".
+metadata:
+  author: CCNP ENCOR Labs Conductor
+  version: 2.0.0
+  category: workflow-automation
+  tags: [ccnp, encor, blueprint, chapter, baseline, topology, curriculum]
 ---
 
 # Chapter Lab Topics Creator Skill

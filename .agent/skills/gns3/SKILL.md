@@ -1,6 +1,11 @@
 ---
 name: gns3
-description: Interaction guide for GNS3 lab environment on Apple M1, focusing on host capabilities, supported nodes, and hardware templates.
+description: Reference for the GNS3 lab environment on Apple M1 (Dynamips only): supported platforms (c7200, c3725), IOS images, slot/adapter configurations, and console port standards. Use when generating lab configs, defining hardware specs, checking interface types (FastEthernet vs GigabitEthernet), setting console ports, or validating Apple Silicon platform compatibility.
+metadata:
+  author: CCNP ENCOR Labs Conductor
+  version: 2.0.0
+  category: domain-knowledge
+  tags: [gns3, cisco, dynamips, apple-silicon, c7200, c3725, hardware]
 ---
 
 # GNS3 Lab Skill (Apple M1)

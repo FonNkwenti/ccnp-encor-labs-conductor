@@ -1,6 +1,11 @@
 ---
 name: chapter-builder
-description: Orchestrates generation of an entire chapter with shared topology and progressive configs, ensuring lab continuity.
+description: Orchestrates generation of a complete CCNP ENCOR lab chapter, chaining initial-configs from each lab's solutions/ into the next and maintaining topology consistency from baseline.yaml. Use when asked to "generate all labs", "build the EIGRP chapter", "create labs 1 through 9", "rebuild the chapter with chaining", or "run the full chapter builder for [technology]".
+metadata:
+  author: CCNP ENCOR Labs Conductor
+  version: 2.0.0
+  category: workflow-automation
+  tags: [ccnp, encor, gns3, cisco, chapter, lab-generation, chaining]
 ---
 
 # Chapter Builder Skill

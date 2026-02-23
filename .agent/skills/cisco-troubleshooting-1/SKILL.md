@@ -1,6 +1,11 @@
 ---
-name: cisco-troubleshooting
-description: Systematically diagnose and resolve Cisco network faults using structured troubleshooting methodologies (Top-Down, Bottom-Up, Divide & Conquer, Follow Traffic Path, Compare Configurations). Connects to live GNS3 routers via Netmiko utilities and uses lab workbook/challenge context for informed diagnosis.
+name: cisco-troubleshooting-1
+description: Systematically diagnoses and resolves Cisco network faults in GNS3 CCNP ENCOR labs using four structured phases and five methodologies (Top-Down, Bottom-Up, Divide and Conquer, Follow Traffic Path, Compare Configurations). Connects to live routers via Netmiko telnet and reads workbook.md/solutions/ for context. Use when a student says "I am stuck", "it is not working", "help me troubleshoot", "OSPF will not form", "routes are missing", "adjacency is down", or any routing/switching connectivity issue.
+metadata:
+  author: CCNP ENCOR Labs Conductor
+  version: 2.0.0
+  category: workflow-automation
+  tags: [ccnp, encor, troubleshooting, cisco, ospf, eigrp, bgp, gns3, netmiko]
 ---
 
 # Cisco Network Troubleshooting Skill
@@ -321,45 +326,7 @@ refresher.run()
 
 ### Step 1: Gather Information
 
-Connect to the relevant routers (identified in Phase 0) and collect data using appropriate commands:
-
-#### CLI Commands (Cisco IOS)
-```
-# Interface status and statistics
-show interfaces [interface-id]
-show ip interface brief
-show interfaces status
-show interfaces trunk
-
-# Routing and Layer 3
-show ip route
-show ip protocols
-show ip ospf neighbor
-show ip eigrp neighbors
-show ip bgp summary
-
-# Layer 2 switching
-show mac address-table
-show vlan brief
-show spanning-tree
-show cdp neighbors detail
-
-# Access Control and Security
-show ip access-lists
-show access-lists
-show ip nat translations
-
-# Hardware and system
-show version
-show inventory
-show environment
-show logging
-
-# Debugging (use with caution)
-debug ip routing
-debug ip packet
-debug eigrp packets
-```
+Connect to the relevant routers (identified in Phase 0) and collect data. See `references/diagnostic-commands.md` for the full command reference organized by OSI layer and protocol.
 
 #### Gathering Evidence from Multiple Routers
 
@@ -446,187 +413,16 @@ Test the specific symptoms from Phase I:
 
 ### Resolution Report Structure
 
-Generate a comprehensive report containing:
+Generate a comprehensive report using the template in `references/incident-report-template.md`. It includes all eight sections:
 
-#### 1. **Incident Summary**
-```
-Incident ID: [INC-2024-0123]
-Reported: [2024-02-08 09:15 PST]
-Reported by: [User: john.doe@company.com]
-Severity: [High - Production Impact]
-
-Problem Statement:
-Users in Building A (subnet 10.20.30.0/24) cannot access the file server 
-at 10.10.10.5. Ping to server times out. Started after maintenance window 
-on 2024-02-08 at 07:00 PST.
-```
-
-#### 2. **Methodology Applied**
-```
-Selected Approach: Divide and Conquer
-
-Rationale:
-- Unknown whether issue is upper or lower layer
-- Started with Layer 3 ping test to determine direction
-- Ping failed, indicating lower layer issue
-- Proceeded to check routing and Layer 2
-```
-
-#### 3. **Diagnostic Log**
-
-Chronological record of all investigations:
-
-```
-[09:20] Initial ping test from 10.20.30.10 to 10.10.10.5 - FAILED
-        
-[09:22] Checked user workstation default gateway
-        Command: ipconfig /all
-        Result: Gateway 10.20.30.1 configured, reachable
-        
-[09:25] Tested ping from Router A (10.20.30.1) to 10.10.10.5 - FAILED
-        This confirms issue is beyond the local subnet
-        
-[09:27] Checked routing table on Router A
-        Command: show ip route | include 10.10.10.0
-        Result: No route to 10.10.10.0/24 found
-        Hypothesis: Missing route or routing protocol failure
-        
-[09:30] Checked OSPF neighbor status
-        Command: show ip ospf neighbor
-        Result: Neighbor 10.1.1.2 in INIT state (should be FULL)
-        Hypothesis: OSPF Hello parameter mismatch
-        
-[09:33] Verified OSPF configuration
-        Command: show ip ospf interface GigabitEthernet0/1
-        Result: Hello interval = 10 seconds (standard)
-               Dead interval = 40 seconds (standard)
-        
-[09:35] Checked neighbor router configuration (via console)
-        Command: show ip ospf interface GigabitEthernet0/0
-        Result: Hello interval = 20 seconds (NON-STANDARD)
-               Dead interval = 80 seconds (NON-STANDARD)
-        ROOT CAUSE IDENTIFIED: Hello/Dead timer mismatch
-        
-[09:40] Verified no OSPF authentication mismatch
-        Command: show ip ospf interface | include auth
-        Result: No authentication configured on either end - OK
-```
-
-#### 4. **Root Cause Analysis**
-
-```
-Root Cause:
-OSPF neighbor relationship between Router A (10.20.30.1) and Router B 
-(10.1.1.2) failed to establish due to Hello/Dead timer mismatch.
-
-Technical Details:
-- Router A: Hello=10s, Dead=40s (default)
-- Router B: Hello=20s, Dead=80s (non-standard)
-- OSPF requires matching timers for adjacency formation
-- Timers were changed during last night's maintenance but not 
-  synchronized between both routers
-
-Impact:
-- Route to 10.10.10.0/24 not learned via OSPF
-- No alternative path available
-- All traffic from Building A to file server failed
-```
-
-#### 5. **Resolution Action**
-
-```
-Configuration Change Implemented:
-
-Router B Configuration:
------------------------
-Router-B# configure terminal
-Router-B(config)# interface GigabitEthernet0/0
-Router-B(config-if)# ip ospf hello-interval 10
-Router-B(config-if)# ip ospf dead-interval 40
-Router-B(config-if)# end
-Router-B# write memory
-
-Verification:
-------------
-Router-B# show ip ospf neighbor
-Neighbor ID     Pri   State        Dead Time   Address
-10.20.30.1      1     FULL/DR      00:00:35    10.1.1.1
-
-Router-A# show ip route 10.10.10.0
-Routing entry for 10.10.10.0/24
-  Known via "ospf 1", distance 110, metric 20
-  Last update from 10.1.1.2, 00:02:15 ago
-  Routing Descriptor Blocks:
-  * 10.1.1.2, from 10.10.10.5, 00:02:15 ago, via GigabitEthernet0/1
-```
-
-#### 6. **Testing and Verification**
-
-```
-Post-Resolution Testing:
-
-Test 1: Ping from user workstation
--------
-C:\> ping 10.10.10.5
-Reply from 10.10.10.5: bytes=32 time=2ms TTL=62
-Reply from 10.10.10.5: bytes=32 time=1ms TTL=62
-Status: SUCCESS ✓
-
-Test 2: File server access test
--------
-User: john.doe successfully accessed \\fileserver\shared
-Status: SUCCESS ✓
-
-Test 3: OSPF neighbor stability
--------
-Monitored for 10 minutes - neighbor remains in FULL state
-Status: STABLE ✓
-
-Test 4: Route presence verification
--------
-Router-A# show ip route 10.10.10.0/24
-Route present via OSPF with metric 20
-Status: SUCCESS ✓
-
-All symptoms from initial problem report resolved.
-```
-
-#### 7. **Lessons Learned and Recommendations**
-
-```
-Immediate Actions Taken:
-1. ✓ OSPF timers synchronized across all routers in datacenter
-2. ✓ Configuration backed up to TFTP server
-3. ✓ Change management ticket updated with root cause
-
-Preventive Measures Recommended:
-1. Implement configuration management tool to detect timer mismatches
-2. Add OSPF neighbor monitoring to network monitoring system
-3. Update change management process to require timer verification
-4. Schedule peer review of all maintenance window changes
-
-Documentation Updated:
-- Network diagram with OSPF areas
-- Standard configuration template for datacenter routers
-- Troubleshooting runbook for routing issues
-```
-
-#### 8. **Incident Metrics**
-
-```
-Resolution Timeline:
-- Reported: 09:15 PST
-- Acknowledged: 09:18 PST
-- Investigation started: 09:20 PST
-- Root cause identified: 09:35 PST
-- Resolution implemented: 09:42 PST
-- Verified and closed: 09:50 PST
-
-Total Duration: 35 minutes
-MTTR (Mean Time To Repair): 35 minutes
-Users Affected: ~50 users in Building A
-Business Impact: Medium (non-critical file access delayed)
-```
+1. **Incident Summary** — problem statement, severity, lab path
+2. **Methodology Applied** — which of the 5 approaches and rationale
+3. **Diagnostic Log** — timestamped chronological investigation record
+4. **Root Cause Analysis** — technical cause + impact
+5. **Resolution Action** — config commands applied + verification
+6. **Post-Resolution Verification** — all symptoms retested
+7. **Lessons Learned** — exam tip + preventive check
+8. **Metrics** — time to root cause, time to resolution
 
 ---
 
@@ -780,9 +576,12 @@ This skill is specifically for **reactive troubleshooting** of existing network 
 
 ## Lab-Aware Troubleshooting Quick Reference
 
-### File Locations
+### References
+
 | Resource | Path |
 |----------|------|
+| Full CLI command reference | `references/diagnostic-commands.md` |
+| Incident report template | `references/incident-report-template.md` |
 | Netmiko utilities | `labs/common/tools/lab_utils.py` |
 | Fault injection utility | `labs/common/tools/fault_utils.py` |
 | Lab workbook | `labs/<chapter>/lab-NN-<slug>/workbook.md` |

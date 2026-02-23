@@ -1,6 +1,11 @@
 ---
 name: drawio
-description: Standards, visual style guide, and workflows for creating and managing network diagrams using Draw.io.
+description: Applies the CCNP lab topology diagram visual standard to Draw.io XML files: Cisco mxgraph icons (blue fill), white stroke connections, IP last-octet labels, smart label placement (empty-side rule), tunnel arcs with color coding, and black/white legend boxes. Use when asked to "create a topology diagram", "update topology.drawio", "draw the network", "generate the diagram", "fix the topology", or when a lab's topology.drawio needs to be created or updated. See references/drawio-xml-snippets.md for ready-to-paste XML.
+metadata:
+  author: CCNP ENCOR Labs Conductor
+  version: 2.0.0
+  category: document-creation
+  tags: [drawio, cisco, topology, network-diagram, gns3, xml, ccnp]
 ---
 
 # Draw.io Diagram Skill
@@ -148,144 +153,25 @@ Every diagram must include a legend box with the following properties:
 
 Tunnel overlays represent **logical connections** that run on top of the physical topology. They must be visually distinct from physical links.
 
-#### 4.9.1 Style Rules
+#### 4.9.1–4.9.6 Tunnel XML, Colors, Arc Algorithm, Octet Labels, Legend & YAML
 
-| Property | Value |
-|----------|-------|
-| Stroke width | `1` (thinner than physical `2`) |
-| Dash pattern | `dashed=1;dashPattern=1 4;` (tiny dots, wide gaps) |
-| Arrow | `endArrow=none;` |
-| Exit point | Top center of source: `exitX=0.5;exitY=0;exitDx=0;exitDy=0;` |
-| Entry point | Top center of target: `entryX=0.5;entryY=0;entryDx=0;entryDy=0;` |
-| Curve | `curved=1;` |
-
-#### 4.9.2 Color Coding by Tunnel Type
-
-| Tunnel Type | Color | Hex |
-|-------------|-------|-----|
-| GRE | White | `#FFFFFF` |
-| MPLS | Orange | `#FF6600` |
-| IPsec VPN | Red | `#FF0000` |
-| VXLAN | Cyan | `#00AAFF` |
-| L2TP | Purple | `#AA00FF` |
-| Other/Unknown | Yellow | `#FFFF00` |
-
-#### 4.9.3 Arc Routing — Curving Over Intermediate Devices
-
-Tunnel lines must arc **above** the physical topology, not route through intermediate devices.
-
-**Algorithm**: Use two waypoints that position the line above both endpoints:
-- `arc_y = min(source_y, target_y) - 100` (100px above the higher device)
-- Waypoint 1: `(source_x + 39, arc_y)` — above source icon center
-- Waypoint 2: `(target_x + 39, arc_y)` — above target icon center
-
-**Example XML** (GRE tunnel R1→R6, R1 at 400,200 and R6 at 200,200):
-```xml
-<mxCell id="tunnel_R1_R6" value="" style="endArrow=none;html=1;strokeWidth=1;strokeColor=#FFFFFF;fillColor=none;dashed=1;dashPattern=1 4;curved=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="R1" target="R6">
-  <mxGeometry relative="1" as="geometry">
-    <Array as="points">
-      <mxPoint x="439" y="100"/>
-      <mxPoint x="239" y="100"/>
-    </Array>
-  </mxGeometry>
-</mxCell>
-<mxCell id="tunnel_R1_R6_lbl" value="Tunnel8 - Tunnel8&#10;172.16.16.0/30&#10;[GRE]" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" vertex="1" connectable="0" parent="tunnel_R1_R6">
-  <mxGeometry relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
-</mxCell>
-```
-
-#### 4.9.4 Tunnel Endpoint Octet Labels
-
-Each tunnel arc endpoint must have a small `.1` / `.2` last-octet label placed **near the top of the device**, at the point where the arc exits/enters.
-
-- **Source device** gets `.1`: position `(source_x + 44, source_y - 15)`
-- **Target device** gets `.2`: position `(target_x + 44, target_y - 15)`
-- **Style**: `edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;`
-- **Parent**: `"1"` (canvas root — same as physical octet labels, NOT parented to the tunnel edge)
-
-**Example XML** (R1 at 400,200 → R6 at 200,200):
-```xml
-<mxCell id="tunnel_R1_R6_0_src_octet" value=".1"
-  style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;"
-  vertex="1" connectable="0" parent="1">
-  <mxGeometry x="444" y="185" as="geometry" />
-</mxCell>
-<mxCell id="tunnel_R1_R6_0_dst_octet" value=".2"
-  style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;"
-  vertex="1" connectable="0" parent="1">
-  <mxGeometry x="244" y="185" as="geometry" />
-</mxCell>
-```
-
-#### 4.9.5 Legend Requirements
-
-The legend box must list each tunnel type present in the diagram:
-```
-Legend
---- Physical Link
-....... GRE Tunnel (white)
-....... IPsec VPN (red)
-....... MPLS (orange)
-EIGRP AS 100
-```
-
-#### 4.9.6 Baseline YAML Structure
-
-Tunnel overlays are defined in the `tunnel_overlays` top-level section of `baseline.yaml`, keyed by lab number:
-
-```yaml
-tunnel_overlays:
-  - lab: 8
-    type: gre
-    source: R1:Tunnel8
-    target: R6:Tunnel8
-    subnet: 172.16.16.0/30
-    description: GRE Tunnel for EIGRP over VPN
-```
+See `references/drawio-xml-snippets.md` for:
+- Full style properties table
+- Tunnel color reference (GRE=white, MPLS=orange, IPsec=red, VXLAN=cyan, L2TP=purple)
+- Arc routing algorithm (`arc_y = min(src_y, tgt_y) - 100`, waypoints at `(x+39, arc_y)`)
+- Ready-to-paste XML for tunnel arcs, endpoint octet labels, and legend format
+- `baseline.yaml` `tunnel_overlays` schema
 
 ### 4.7 Reference XML Snippets
 
-**Title Cell:**
-```xml
-<mxCell id="title" value="Lab N: Title Here" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1" vertex="1" parent="1">
-  <mxGeometry x="200" y="40" width="400" height="40" as="geometry" />
-</mxCell>
-```
-
-**Device Icon:**
-```xml
-<mxCell id="R1" value="" style="shape=mxgraph.cisco.routers.router;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;" vertex="1" parent="1">
-  <mxGeometry x="400" y="200" width="78" height="53" as="geometry" />
-</mxCell>
-```
-
-**Device Label (left of icon):**
-```xml
-<mxCell id="R1_lbl" value="R1&#10;Hub/ABR&#10;10.1.1.1/32" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" vertex="1" parent="1">
-  <mxGeometry x="300" y="193" width="100" height="60" as="geometry" />
-</mxCell>
-```
-
-**White Connection Line:**
-```xml
-<mxCell id="link_R1_R2" value="" style="endArrow=none;html=1;strokeWidth=2;strokeColor=#FFFFFF;fillColor=#f5f5f5;" edge="1" parent="1" source="R1" target="R2">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell>
-```
-
-**IP Last Octet Label:**
-```xml
-<mxCell id="R1_Fa1_0_octet" value=".1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" vertex="1" connectable="0" parent="1">
-  <mxGeometry x="450" y="260" as="geometry" />
-</mxCell>
-```
-
-**Legend Box:**
-```xml
-<mxCell id="legend" value="Legend&#10;--- Physical Link&#10;- - - Tunnel Link&#10;OSPF Process ID: 1&#10;Area 0 (Backbone)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#FFFFFF;fontColor=#FFFFFF;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
-  <mxGeometry x="600" y="700" width="180" height="100" as="geometry" />
-</mxCell>
-```
+See `references/drawio-xml-snippets.md` for ready-to-paste XML for all elements:
+- Title cell, router/switch icons
+- Device labels (left and right placement)
+- White connection lines with edge labels
+- IP last-octet labels
+- Legend box
+- GRE/IPsec tunnel arcs with endpoint octet labels
+- Bypass-link offset layout example
 
 ## 5. Workflow
 
