@@ -2,7 +2,7 @@
 # Source of truth for topology, addressing, and lab progression
 
 chapter: OSPF
-version: 1.0
+version: 1.1
 
 # =============================================================================
 # CORE TOPOLOGY - Present in ALL labs
@@ -23,24 +23,26 @@ core_topology:
           adapter: PA-GE
 
     - name: R2
-      platform: c3725
+      platform: c7200
       role: Backbone Router
       loopback0: 10.2.2.2/32
       console_port: 5002
       slots:
         - slot: 0
-          adapter: GT96100-FE
+          adapter: C7200-IO-FE
+        - slot: 1
+          adapter: PA-2FE-TX
 
     - name: R3
-      platform: c3725
+      platform: c7200
       role: Branch Router
       loopback0: 10.3.3.3/32
       console_port: 5003
       slots:
         - slot: 0
-          adapter: GT96100-FE
+          adapter: C7200-IO-FE
         - slot: 1
-          adapter: NM-1FE-TX
+          adapter: PA-2FE-TX
 
   links:
     - id: L1
@@ -50,14 +52,14 @@ core_topology:
       description: Backbone Link 1
       
     - id: L2
-      source: R2:Fa0/1
+      source: R2:Fa1/0
       target: R3:Fa0/0
       subnet: 10.23.0.0/30
       description: Branch Link
       
     - id: L3
       source: R1:Fa1/1
-      target: R3:Fa0/1
+      target: R3:Fa1/0
       subnet: 10.13.0.0/30
       description: Backbone Link 2 (Triangle)
 
@@ -66,20 +68,26 @@ core_topology:
 # =============================================================================
 optional_devices:
   - name: R4
-    platform: c3725
+    platform: c7200
     role: NSSA Router
     loopback0: 10.4.4.4/32
     console_port: 5004
     available_from: 6
     purpose: NSSA area and Type 7 LSA demonstration
+    slots:
+      - slot: 0
+        adapter: C7200-IO-FE
 
   - name: R5
-    platform: c3725
+    platform: c7200
     role: ASBR/External
     loopback0: 10.5.5.5/32
     console_port: 5005
     available_from: 7
     purpose: Redistribution and external route testing
+    slots:
+      - slot: 0
+        adapter: C7200-IO-FE
 
   - name: R6
     platform: c7200
@@ -88,6 +96,9 @@ optional_devices:
     console_port: 5006
     available_from: 8
     purpose: OSPFv3 neighbor adjacencies
+    slots:
+      - slot: 3
+        adapter: PA-GE
 
   - name: R7
     platform: c3725
@@ -109,18 +120,25 @@ optional_links:
     description: ABR to NSSA Area
     
   - id: L5
-    source: R2:Fa1/0
+    source: R2:Fa1/1
     target: R5:Fa0/0
     subnet: 10.25.0.0/30
     available_from: 7
     description: ASBR to External Domain
     
   - id: L6
-    source: R3:Fa1/0
+    source: R3:Fa1/1
     target: R7:Fa0/0
     subnet: 10.37.0.0/30
     available_from: 5
     description: Area 1 to Stub Area
+
+  - id: L7
+    source: R1:Gi3/0
+    target: R6:Gi3/0
+    subnet: 10.16.0.0/30
+    available_from: 8
+    description: ABR to OSPFv3 Border
 
 # =============================================================================
 # LAB PROGRESSION

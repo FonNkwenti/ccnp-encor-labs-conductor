@@ -8,27 +8,55 @@
 4. **High Code Coverage:** Aim for >80% code coverage for all modules
 5. **User Experience First:** Every decision should prioritize user experience
 6. **Non-Interactive & CI-Aware:** Prefer non-interactive commands. Use `CI=true` for watch-mode tools (tests, linters) to ensure single execution.
+7. **Simplicity First:** Make every change as simple as possible. Impact minimal code.
+8. **No Laziness:** Find root causes. No temporary fixes. Maintain senior developer standards.
+9. **Minimal Impact:** Changes should only touch what's necessary. Avoid introducing regressions.
 
 ## Task Workflow
 
-All tasks follow a strict lifecycle:
+### Workflow Orchestration Strategies
+
+#### 1. Plan Node Default
+- **Trigger:** Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions).
+- **Pivot:** If something goes sideways, **STOP** and re-plan immediately - do not keep pushing.
+- **Scope:** Use plan mode for verification steps, not just building.
+- **Precision:** Write detailed specs upfront in `plan.md` (for tracks) or `tasks/todo.md` (global) to reduce ambiguity.
+
+#### 2. Subagent Strategy
+- **Cleanliness:** Use subagents (like `codebase_investigator`) liberally to keep the main context window clean.
+- **Offloading:** Offload research, exploration, and parallel analysis to subagents.
+- **Compute:** For complex problems, throw more compute at it via subagents.
+- **Focus:** One task per subagent for focused execution.
+
+#### 3. Self-Improvement Loop
+- **Pattern Capture:** After ANY correction from the user, update `tasks/lessons.md` with the pattern.
+- **Rule Creation:** Write rules for yourself that prevent the same mistake.
+- **Ritual:** Review `tasks/lessons.md` at the start of each session.
+
+#### 4. Autonomous Bug Fixing (Fix on Evidence)
+- **Action:** When given a bug report or encountering an error with clear evidence (logs, failing tests), resolve it autonomously.
+- **Constraint:** Zero context switching required from the user for obvious fixes.
+- **Proactive:** Fix failing CI tests without being told how.
 
 ### Standard Task Workflow
 
-1. **Select Task:** Choose the next available task from `plan.md` in sequential order
+1. **Select Task:** Choose the next available task from `plan.md` in sequential order.
 
-2. **Mark In Progress:** Before beginning work, edit `plan.md` and change the task from `[ ]` to `[~]`
+2. **Mark In Progress:** Before beginning work, edit `plan.md` and change the task from `[ ]` to `[~]`.
 
-3. **Write Failing Tests (Red Phase):**
+3. **Plan Node Check:** If the task is non-trivial (>3 steps), ensure the plan is detailed and reflects current understanding.
+
+4. **Write Failing Tests (Red Phase):**
    - Create a new test file for the feature or bug fix.
    - Write one or more unit tests that clearly define the expected behavior and acceptance criteria for the task.
    - **CRITICAL:** Run the tests and confirm that they fail as expected. This is the "Red" phase of TDD. Do not proceed until you have failing tests.
 
-4. **Implement to Pass Tests (Green Phase):**
+5. **Implement to Pass Tests (Green Phase):**
+   - **Elegance Pause:** Before implementing, ask: "Is there a more elegant way?" If the planned fix feels hacky, implement the elegant solution.
    - Write the minimum amount of application code necessary to make the failing tests pass.
    - Run the test suite again and confirm that all tests now pass. This is the "Green" phase.
 
-5. **Refactor (Optional but Recommended):**
+6. **Refactor (Optional but Recommended):**
    - With the safety of passing tests, refactor the implementation code and the test code to improve clarity, remove duplication, and enhance performance without changing the external behavior.
    - Rerun tests to ensure they still pass after refactoring.
 

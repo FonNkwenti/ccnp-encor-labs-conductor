@@ -162,6 +162,11 @@ description: Generates CCNP ENCOR lab workbooks, initial configs, and setup_lab.
 - Console-only access (no SSH in Dynamips)
 - Netmiko `device_type='cisco_ios_telnet'` required
 
+**Platform Recommendation: c7200 for Advanced Labs**
+- **Issue:** C3725 platforms are limited to IOS 12.4, which lacks support for modern features like EIGRP Named Mode, advanced SHA authentication, and specific IPv6 features.
+- **Solution:** Use **C7200 routers with IOS 15.x** for any advanced technology scenarios or integration labs.
+- **Rule:** When designing a `baseline.yaml`, prioritize `c7200` for core routers and any devices intended for advanced feature demonstration (e.g., named mode, IPsec, advanced BGP). Reserve `c3725` only for simple branch or stub devices where basic connectivity is sufficient.
+
 **Lesson:** Document constraints upfront. Don't promise features (like IOS-XE advanced commands) that Dynamips can't support.
 
 ---
@@ -566,6 +571,29 @@ show interface tunnel [N]
 - **RFC 2328** (OSPF), **RFC 7868** (EIGRP) — protocol details
 - **GNS3 Documentation** — console access, Dynamips quirks
 - **Netmiko Documentation** — device_type options, send_config_set() behavior
+
+---
+
+## Part 13: Workflow & Process Lessons
+
+### The "Claude Code" Influence (February 2026)
+
+**Strategy: Plan Node Default**
+- **Lesson:** Stop being a "cowboy coder." Any task with >3 steps or architectural implications MUST have a documented plan update in `plan.md` (track) or `tasks/todo.md` (global) first.
+- **Why:** Reduces context switching and clarifies the "definition of done" before a single line of code is written.
+
+**Strategy: Self-Improvement Loop**
+- **Lesson:** Update `tasks/lessons.md` immediately after any user correction or when a better process is identified.
+- **Rule:** If a user says "don't do X, do Y," capture it in the process log. Review this file at the start of every session.
+- **Success Metric:** Mistake rate should drop towards zero for repeated workflow tasks.
+
+**Strategy: Demand Elegance**
+- **Lesson:** Before implementation, pause for 10 seconds. Ask: "Is this the most elegant way?"
+- **Constraint:** Don't over-engineer simple fixes, but don't tolerate "hacky" solutions for core architecture.
+
+**Strategy: Autonomous Bug Fixing (Fix on Evidence)**
+- **Lesson:** Don't ask for permission to fix a bug if you have clear evidence (logs, failing tests).
+- **Rule:** Fix the root cause, not just the symptom. Proactively resolve CI failures.
 
 ---
 

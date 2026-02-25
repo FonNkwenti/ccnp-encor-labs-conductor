@@ -1,0 +1,316 @@
+# BGP Chapter Baseline
+# Source of truth for topology, addressing, and lab progression
+
+chapter: BGP
+version: 1.0
+
+# BGP Autonomous System Assignments
+autonomous_systems:
+  - asn: 65001
+    name: Enterprise
+    devices: [R1, R4, R6]
+    advertised_prefixes:
+      - 192.168.1.0/24
+      - 192.168.2.0/24
+      - 192.168.3.0/24
+
+  - asn: 65002
+    name: ISP-A
+    devices: [R2]
+    advertised_prefixes:
+      - 198.51.100.0/24
+      - 198.51.101.0/24
+      - 198.51.102.0/24
+
+  - asn: 65003
+    name: ISP-B
+    devices: [R3]
+    advertised_prefixes:
+      - 203.0.113.0/24
+      - 203.0.114.0/24
+      - 203.0.115.0/24
+
+  - asn: 65004
+    name: Downstream Customer
+    devices: [R5]
+    advertised_prefixes:
+      - 10.4.0.0/16
+
+  - asn: 65005
+    name: Remote Customer
+    devices: [R7]
+    advertised_prefixes:
+      - 10.5.0.0/16
+
+# =============================================================================
+# CORE TOPOLOGY - Present in ALL labs
+# Triangle: Enterprise Edge dual-homed to two ISPs, ISPs peer with each other
+# =============================================================================
+core_topology:
+  devices:
+    - name: R1
+      platform: c7200
+      role: Enterprise Edge
+      asn: 65001
+      loopback0: 172.16.1.1/32
+      console_port: 5001
+      slots:
+        - slot: 0
+          adapter: C7200-IO-FE
+        - slot: 1
+          adapter: PA-2FE-TX
+        - slot: 3
+          adapter: PA-GE
+
+    - name: R2
+      platform: c7200
+      role: ISP-A
+      asn: 65002
+      loopback0: 172.16.2.2/32
+      console_port: 5002
+      slots:
+        - slot: 0
+          adapter: C7200-IO-FE
+        - slot: 1
+          adapter: PA-2FE-TX
+
+    - name: R3
+      platform: c7200
+      role: ISP-B
+      asn: 65003
+      loopback0: 172.16.3.3/32
+      console_port: 5003
+      slots:
+        - slot: 0
+          adapter: C7200-IO-FE
+        - slot: 1
+          adapter: PA-2FE-TX
+
+  links:
+    - id: L1
+      source: R1:Fa1/0
+      target: R2:Fa0/0
+      subnet: 10.1.12.0/30
+      description: Enterprise to ISP-A (eBGP)
+
+    - id: L2
+      source: R2:Fa1/0
+      target: R3:Fa0/0
+      subnet: 10.1.23.0/30
+      description: ISP-A to ISP-B (eBGP)
+
+    - id: L3
+      source: R1:Fa1/1
+      target: R3:Fa1/0
+      subnet: 10.1.13.0/30
+      description: Enterprise to ISP-B (eBGP)
+
+# =============================================================================
+# OPTIONAL DEVICES - Added for specific labs
+# =============================================================================
+optional_devices:
+  - name: R4
+    platform: c3725
+    role: Enterprise Internal
+    asn: 65001
+    loopback0: 172.16.4.4/32
+    console_port: 5004
+    available_from: 3
+    purpose: iBGP peer within the Enterprise AS
+    slots:
+      - slot: 0
+        adapter: GT96100-FE
+
+  - name: R5
+    platform: c3725
+    role: Downstream Customer
+    asn: 65004
+    loopback0: 172.16.5.5/32
+    console_port: 5005
+    available_from: 6
+    purpose: Customer AS for community and policy exercises
+    slots:
+      - slot: 0
+        adapter: GT96100-FE
+
+  - name: R6
+    platform: c7200
+    role: Enterprise Edge 2
+    asn: 65001
+    loopback0: 172.16.6.6/32
+    console_port: 5006
+    available_from: 8
+    purpose: Route reflector client and iBGP scaling
+    slots:
+      - slot: 0
+        adapter: C7200-IO-FE
+      - slot: 3
+        adapter: PA-GE
+
+  - name: R7
+    platform: c3725
+    role: Remote Customer
+    asn: 65005
+    loopback0: 172.16.7.7/32
+    console_port: 5007
+    available_from: 10
+    purpose: Multi-protocol BGP and enterprise integration
+    slots:
+      - slot: 0
+        adapter: GT96100-FE
+
+optional_links:
+  - id: L4
+    source: R1:Fa0/0
+    target: R4:Fa0/0
+    subnet: 10.1.14.0/30
+    available_from: 3
+    description: Enterprise Edge to Enterprise Internal (iBGP)
+
+  - id: L5
+    source: R3:Fa1/1
+    target: R5:Fa0/0
+    subnet: 10.1.35.0/30
+    available_from: 6
+    description: ISP-B to Downstream Customer (eBGP)
+
+  - id: L6
+    source: R1:Gi3/0
+    target: R6:Gi3/0
+    subnet: 10.1.16.0/30
+    available_from: 8
+    description: Enterprise Edge to Enterprise Edge 2 (iBGP)
+
+  - id: L7
+    source: R2:Fa1/1
+    target: R7:Fa0/0
+    subnet: 10.1.27.0/30
+    available_from: 10
+    description: ISP-A to Remote Customer (eBGP)
+
+# =============================================================================
+# LAB PROGRESSION
+# =============================================================================
+labs:
+  - number: 1
+    title: Basic eBGP Peering
+    difficulty: Foundation
+    time_minutes: 45
+    devices: [R1, R2, R3]
+    objectives:
+      - Configure eBGP neighbor relationships between directly connected peers
+      - Advertise prefixes using the network statement
+      - Verify BGP neighbor states and the BGP table
+      - Understand the difference between the BGP table and the routing table
+
+  - number: 2
+    title: BGP Path Selection Algorithm
+    difficulty: Foundation
+    time_minutes: 60
+    devices: [R1, R2, R3]
+    extends: 1
+    objectives:
+      - Manipulate path selection using Weight (local preference on steroids)
+      - Configure Local Preference for AS-wide outbound policy
+      - Observe AS-Path length influence on best path
+      - Demonstrate MED for inter-AS inbound traffic hints
+
+  - number: 3
+    title: iBGP Fundamentals & Next-Hop-Self
+    difficulty: Foundation
+    time_minutes: 60
+    devices: [R1, R2, R3, R4]
+    extends: 2
+    topology_note: R4 added as Enterprise Internal iBGP peer
+    objectives:
+      - Configure iBGP peering between loopback addresses
+      - Understand iBGP split-horizon rule (no re-advertisement to iBGP peers)
+      - Implement next-hop-self on eBGP-to-iBGP boundary
+      - Verify end-to-end reachability through iBGP
+
+  - number: 4
+    title: Route Filtering with Prefix-Lists
+    difficulty: Intermediate
+    time_minutes: 75
+    devices: [R1, R2, R3, R4]
+    extends: 3
+    objectives:
+      - Configure ip prefix-lists for inbound and outbound filtering
+      - Apply distribute-lists to BGP neighbors
+      - Implement soft reconfiguration for policy changes without resetting peers
+      - Verify filtered routes using show ip bgp neighbors advertised/received
+
+  - number: 5
+    title: AS-Path Manipulation & Route-Maps
+    difficulty: Intermediate
+    time_minutes: 75
+    devices: [R1, R2, R3, R4]
+    extends: 4
+    objectives:
+      - Configure AS-path access-lists for matching
+      - Build route-maps with match and set clauses
+      - Prepend AS-path to influence inbound traffic
+      - Apply conditional route advertisement
+
+  - number: 6
+    title: BGP Communities & Policy Control
+    difficulty: Intermediate
+    time_minutes: 75
+    devices: [R1, R2, R3, R4, R5]
+    extends: 5
+    topology_note: R5 added as Downstream Customer (AS 65004)
+    objectives:
+      - Configure standard and extended BGP communities
+      - Apply well-known communities (no-export, no-advertise, local-AS)
+      - Build community-based route policies with route-maps
+      - Propagate communities with send-community neighbor command
+
+  - number: 7
+    title: Multihoming & Traffic Engineering
+    difficulty: Advanced
+    time_minutes: 90
+    devices: [R1, R2, R3, R4, R5]
+    extends: 6
+    objectives:
+      - Design dual-homed eBGP for high availability
+      - Engineer outbound traffic with Local Preference per prefix
+      - Engineer inbound traffic with AS-Path prepending and MED
+      - Implement conditional default route origination
+
+  - number: 8
+    title: Route Reflectors & iBGP Scaling
+    difficulty: Advanced
+    time_minutes: 90
+    devices: [R1, R2, R3, R4, R5, R6]
+    extends: 7
+    topology_note: R6 added as Enterprise Edge 2 (RR client)
+    objectives:
+      - Configure R1 as a route reflector with R4 and R6 as clients
+      - Understand cluster-id and originator-id loop prevention
+      - Eliminate the need for full-mesh iBGP
+      - Verify route reflector path propagation
+
+  - number: 9
+    title: BGP Authentication & Security
+    difficulty: Advanced
+    time_minutes: 75
+    devices: [R1, R2, R3, R4, R5, R6]
+    extends: 8
+    objectives:
+      - Configure MD5 authentication on all BGP sessions
+      - Implement TTL Security (GTSM) for eBGP peers
+      - Configure maximum-prefix limits to protect against route leaks
+      - Apply route filtering as a security control
+
+  - number: 10
+    title: MP-BGP & Enterprise Integration
+    difficulty: Advanced
+    time_minutes: 120
+    devices: [R1, R2, R3, R4, R5, R6, R7]
+    extends: 9
+    topology_note: R7 added as Remote Customer (AS 65005) for full integration
+    objectives:
+      - Configure MP-BGP with IPv4 and IPv6 address families
+      - Implement BGP-to-IGP redistribution with route control
+      - Verify dual-stack reachability across multiple autonomous systems
+      - Demonstrate end-to-end enterprise connectivity

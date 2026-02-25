@@ -10,10 +10,12 @@ Create and implement OSPF Lab 07: Authentication & Redistribution, following the
     - `workbook.md` (Challenge-First format)
     - `initial-configs/` (Base configurations)
     - `solutions/` (Full solution configurations)
+- **Hardware Standard:**
+    - R1, R2, R3, R5 MUST use `c7200` (IOS 15.x) as per updated `baseline.yaml`.
 - **Content:**
-    - MD5/SHA authentication.
-    - Redistribution of external routes.
-    - E1 vs E2 metric types.
+    - MD5/SHA authentication (Area-based and interface-based).
+    - Redistribution of external routes (EIGRP/Connected).
+    - E1 vs E2 metric types and metric manipulation.
     - Skynet Global scenario narrative.
 
 ## Success Criteria
