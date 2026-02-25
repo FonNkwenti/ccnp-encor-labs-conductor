@@ -1,0 +1,78 @@
+BGP Lab 05 - AS-Path Manipulation & Route-Maps
+Verification Commands
+=====================================================================
+
+--- Task 1: AS-Path Access-Lists ---
+
+! View AS-path ACL definitions
+R1# show ip as-path-access-list
+
+! Filter BGP table by AS-path regex — show routes originated in AS 65002
+R1# show ip bgp regexp ^65002$
+
+! Show routes transiting through AS 65002
+R1# show ip bgp regexp _65002_
+
+! Show routes from AS 65003
+R1# show ip bgp regexp ^65003$
+
+--- Task 2: Local Preference via Route-Map (SET-LP-200-ISP-A) ---
+
+! Verify ISP-A routes have local-preference 200
+R1# show ip bgp | include 65002
+R1# show ip bgp 198.51.100.0        ! should show Local Pref 200
+
+! Verify ISP-B routes have local-preference 150 (from POLICY-ISP-B-IN)
+R1# show ip bgp 203.0.113.0         ! should show Local Pref 150
+
+! Verify R4 sees the same local-preferences (iBGP propagation)
+R4# show ip bgp
+! ISP-A prefixes should show LocPrf 200, ISP-B prefixes show 150
+
+! Verify route-map counters
+R1# show route-map SET-LP-200-ISP-A
+
+--- Task 3: AS-Path Prepending (PREPEND-TO-ISP-B) ---
+
+! Verify AS-path prepending on R3's BGP table
+! Enterprise routes via R1 direct should show: 65001 65001 65001 65001 (4 hops)
+! Enterprise routes via R2 should show: 65002 65001 (2 hops)
+R3# show ip bgp 192.168.1.0
+
+! Expected output: two paths to 192.168.1.0:
+!   *   10.1.13.1    65001 65001 65001 65001    (longer — via R1 direct)
+!   *>  10.1.23.1    65002 65001                (shorter — via R2, preferred)
+R3# show ip bgp
+
+! Confirm route-map match counters on R1
+R1# show route-map PREPEND-TO-ISP-B
+
+--- Task 4: Combined Route-Map Inbound from ISP-B (POLICY-ISP-B-IN) ---
+
+! Verify 203.0.115.0/24 is denied (not in R1's BGP table)
+R1# show ip bgp neighbors 10.1.13.2 routes | include 203.0.115
+
+! Verify 203.0.113.0/24 and 203.0.114.0/24 ARE present
+R1# show ip bgp 203.0.113.0
+
+! Check route-map counters for POLICY-ISP-B-IN
+R1# show route-map POLICY-ISP-B-IN
+
+--- Global State ---
+
+R1# show ip bgp summary
+R2# show ip bgp summary
+R3# show ip bgp summary
+R4# show ip bgp summary
+
+! Expected state summary:
+! R1: ISP-A routes (LP=200) preferred over ISP-B (LP=150) for same destination
+! R1: 203.0.115.0/24 absent from BGP table (denied by POLICY-ISP-B-IN)
+! R3: Enterprise prefixes via R1 show AS-path length 4; via R2 length 2 (R2 preferred)
+! R4: Local preference visible on iBGP-learned routes (LP=200 for ISP-A, LP=150 for ISP-B)
+
+--- Soft Reset Commands ---
+
+R1# clear ip bgp 10.1.12.2 soft in
+R1# clear ip bgp 10.1.13.2 soft in
+R1# clear ip bgp 10.1.13.2 soft out
