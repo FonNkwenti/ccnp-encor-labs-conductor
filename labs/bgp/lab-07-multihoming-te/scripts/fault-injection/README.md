@@ -1,50 +1,42 @@
-# BGP Lab 07 — Fault Injection Scripts
+# BGP Lab 07 — Fault Injection Scenarios
 
-This directory contains fault injection and solution restoration scripts for
-BGP Lab 07: Multihoming & Traffic Engineering.
-
-All scripts use `device_type="cisco_ios_telnet"` and connect to `127.0.0.1`
-(GNS3 localhost). Each router's console port is listed below.
-
-## Console Port Reference
-
-| Device | Role | Port |
-|---|---|---|
-| R1 | Enterprise Edge | 5001 |
-| R2 | ISP-A | 5002 |
-| R3 | ISP-B | 5003 |
-| R4 | Enterprise Internal | 5004 |
-| R5 | Downstream Customer | 5005 |
-
-## Prerequisites
-
-```bash
-pip install netmiko
-```
-
-GNS3 must be running with all 5 routers loaded and in the **Lab 07 solution state**
-before injecting any fault. Use `apply_solution.py` to restore that state.
+This directory contains three fault injection scripts for BGP Lab 07: Multihoming & Traffic Engineering.
+Each script introduces a targeted misconfiguration on R1 that breaks a specific traffic engineering behavior.
+Run `apply_solution.py` at any time to restore all routers to the correct Lab 07 solution state.
 
 ---
 
-## Scenario 01 — Conditional Default Not Received by R4
+## Prerequisites
 
-**File:** `inject_scenario_01.py`
-**Target:** R1 (port 5001)
+- GNS3 topology for Lab 07 must be running.
+- All routers must be at the Lab 07 solution state before injecting faults.
+  If starting fresh, run `../../setup_lab.py` first, complete the lab tasks, then use these scripts.
+- Python 3 with `netmiko` installed: `pip install netmiko`
 
-**What it breaks:**
-- Removes the `ip route 0.0.0.0 0.0.0.0 Null0` static default route from R1
-- Replaces the COND-DEFAULT route-map to reference a non-existent prefix-list
-  (`COND-DEFAULT-WRONG` instead of `COND-DEFAULT-CHECK`)
+---
 
-**Symptom:** R4 has no default route. `show ip route 0.0.0.0` on R4 returns
-`% Network not in table`.
+## Scenario 01 — Conditional Default Route Broken
 
-**Root Causes to Find:**
-1. Missing static default (`ip route 0.0.0.0 0.0.0.0 Null0`) — IOS will not
-   originate a conditional default without a local 0/0 entry.
-2. COND-DEFAULT route-map references a non-existent prefix-list, so the condition
-   never matches and R1 never sends the default even if the static existed.
+**Script:** `inject_scenario_01.py`
+
+**Fault Description:**
+The static `ip route 0.0.0.0 0.0.0.0 Null0` on R1 is removed, and the
+`default-originate route-map COND-DEFAULT` statement is removed from R1's
+iBGP neighbor config for R4 (172.16.4.4). Without the static route, the
+COND-DEFAULT route-map condition can never be satisfied, so R1 stops
+advertising a default route to R4 via iBGP.
+
+**Symptom:**
+R4 loses its 0.0.0.0/0 entry from BGP. The enterprise internal router has
+no default route and cannot reach any internet destinations.
+
+**Verification Commands:**
+```
+R4# show ip route 0.0.0.0
+R4# show ip bgp 0.0.0.0
+R1# show ip bgp neighbors 172.16.4.4 advertised-routes
+R1# show ip route 0.0.0.0
+```
 
 **Run:**
 ```bash
@@ -53,25 +45,35 @@ python3 inject_scenario_01.py
 
 ---
 
-## Scenario 02 — MED Values Causing Wrong Inbound Path Selection
+## Scenario 02 — MED Values Swapped (Wrong Inbound Traffic Preference)
 
-**File:** `inject_scenario_02.py`
-**Target:** R1 (port 5001)
+**Script:** `inject_scenario_02.py`
 
-**What it breaks:**
-- Swaps MED metric values in TE-TO-ISP-A:
-  - PREFIX-192-168-2 (should be MED=100) gets MED=10
-  - PREFIX-192-168-1 (should be MED=10) gets MED=100
-- Removes the AS-path prepend on PREFIX-192-168-2
+**Fault Description:**
+The MED values in `TE-TO-ISP-A` and `TE-TO-ISP-B` are swapped for the
+primary-preferred prefixes. Specifically:
+- `TE-TO-ISP-A` seq 20: 192.168.1.0/24 gets MED=100 (should be MED=10)
+- `TE-TO-ISP-B` seq 20: 192.168.2.0/24 gets MED=100 (should be MED=10)
 
-**Symptom:** R2 (ISP-A) sees 192.168.2.0/24 with Metric=10 (preferred ingress
-via ISP-A) and 192.168.1.0/24 with Metric=100 (deprioritized) — exactly backwards
-from the intended policy. Inbound traffic for 192.168.1.0/24 enters via ISP-B
-instead of ISP-A.
+The design intent is that 192.168.1.0/24 should attract inbound traffic via
+ISP-A (low MED=10 advertised to ISP-A) and 192.168.2.0/24 should attract
+traffic via ISP-B. With both MEDs set to 100, neither ISP has a reason to
+prefer their designated path — inbound traffic distribution is broken.
 
-**Root Cause to Find:**
-TE-TO-ISP-A has MED values inverted between PREFIX-192-168-1 and PREFIX-192-168-2.
-Check with `show route-map TE-TO-ISP-A` and compare seq 10 and seq 20 match/set clauses.
+**Symptom:**
+ISP-A and ISP-B both see MED=100 for their designated preferred prefix.
+Traffic engineering for inbound path selection is ineffective. Both prefixes
+may arrive via whichever ISP wins on AS-path length or other attributes.
+
+**Verification Commands:**
+```
+R2# show ip bgp 192.168.1.0        (expect MED=100, was 10 — indicates fault)
+R3# show ip bgp 192.168.2.0        (expect MED=100, was 10 — indicates fault)
+R1# show route-map TE-TO-ISP-A
+R1# show route-map TE-TO-ISP-B
+R1# show ip bgp neighbors 10.1.12.2 advertised-routes
+R1# show ip bgp neighbors 10.1.13.2 advertised-routes
+```
 
 **Run:**
 ```bash
@@ -80,25 +82,33 @@ python3 inject_scenario_02.py
 
 ---
 
-## Scenario 03 — AS-Path Prepend Not Taking Effect
+## Scenario 03 — AS-Path Prepend Shadowed by Catch-All (Wrong Order)
 
-**File:** `inject_scenario_03.py`
-**Target:** R1 (port 5001)
+**Script:** `inject_scenario_03.py`
 
-**What it breaks:**
-- Moves the AS-path prepend entry for PREFIX-192-168-2 in TE-TO-ISP-A from
-  sequence 10 to sequence 50 — placing it after the catch-all permit at sequence 40.
-- The catch-all (seq 40, no match clause) accepts all routes first, so seq 50
-  with the prepend never fires.
+**Fault Description:**
+In `TE-TO-ISP-B`, the entry that applies 3x AS-path prepend to 192.168.1.0/24
+(originally at seq 10) is deleted and re-added at seq 50. Because the catch-all
+`route-map TE-TO-ISP-B permit 40` matches all prefixes before seq 50 is evaluated,
+the prepend statement is effectively dead — it will never be reached.
 
-**Symptom:** R2 receives 192.168.2.0/24 with AS-path `65001` (1 entry) instead
-of the expected `65001 65001 65001 65001` (4 entries). Inbound traffic for
-192.168.2.0/24 may enter via ISP-A instead of ISP-B as intended.
+ISP-B now receives 192.168.1.0/24 with a normal (unprepended) AS-path, making the
+path look shorter and equally or more attractive than the ISP-A path. This undermines
+the inbound TE design that intended ISP-A as the preferred entry point for 192.168.1.0/24.
 
-**Root Cause to Find:**
-`show route-map TE-TO-ISP-A` will reveal that seq 50 contains the prepend but
-seq 40 (no match = permit all) comes before it. The fix is to remove the route-map
-and rebuild it with the prepend entry at seq 10 (before the catch-all at seq 40).
+**Symptom:**
+R3 (ISP-B) sees 192.168.1.0/24 with AS-path `65001` instead of `65001 65001 65001 65001`.
+If ISP-A and ISP-B are peers (they are — via 10.1.23.0/30), ISP-B may now prefer
+its direct path to 192.168.1.0/24 over the ISP-A path, causing traffic to arrive
+via ISP-B instead of the intended ISP-A uplink.
+
+**Verification Commands:**
+```
+R3# show ip bgp 192.168.1.0        (expect AS-path: 65001 — no prepend, should be 4 hops)
+R1# show route-map TE-TO-ISP-B     (seq 10 missing; seq 50 appears after seq 40 catch-all)
+R1# show ip bgp neighbors 10.1.13.2 advertised-routes
+R2# show ip bgp 192.168.1.0        (compare AS-path length received from R3 via peer link)
+```
 
 **Run:**
 ```bash
@@ -107,33 +117,14 @@ python3 inject_scenario_03.py
 
 ---
 
-## Apply Solution — Restore All Routers to Lab 07 Solution State
+## Restoring to Solution State
 
-**File:** `apply_solution.py`
-**Targets:** R1 (5001), R2 (5002), R3 (5003), R4 (5004), R5 (5005)
+To reset all routers to the correct Lab 07 solution configuration after any fault:
 
-Restores all 5 routers to the complete Lab 07 solved configuration. Run this
-after any fault injection scenario to reset the lab for the next exercise.
-
-**What it restores on R1:**
-- `ip route 0.0.0.0 0.0.0.0 Null0` static route
-- All prefix-lists: ISP-A-PREFIXES, ISP-B-PREFIXES, PREFIX-192-168-1/2/3,
-  COND-DEFAULT-CHECK
-- Route-maps: LP-FROM-ISP-A, LP-FROM-ISP-B, TE-TO-ISP-A, TE-TO-ISP-B, COND-DEFAULT
-- BGP neighbor policies: LP inbound, TE outbound, conditional default to R4
-
-**What it restores on R2, R3, R4, R5:** send-community statements and existing
-route-maps (unchanged from Lab 06 baseline).
-
-**Run:**
 ```bash
 python3 apply_solution.py
 ```
 
-**Post-restore verification:**
-```
-R1# show ip bgp summary
-R2# show ip bgp 192.168.2.0   (expect AS-path: 65001 65001 65001 65001)
-R2# show ip bgp 192.168.1.0   (expect Metric: 10)
-R4# show ip bgp               (expect 0.0.0.0/0 present)
-```
+This script rebuilds all modified route-maps on R1, restores the static Null0 route,
+re-applies the conditional default-originate, and issues `clear ip bgp soft` commands
+to propagate updated policy to all neighbors.

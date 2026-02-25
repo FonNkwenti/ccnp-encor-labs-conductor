@@ -20,30 +20,19 @@ def connect(port):
 
 # ── R1 ──────────────────────────────────────────────────────────────────────
 r1_commands = [
-    # Static default route for conditional default-originate
-    "ip route 0.0.0.0 0.0.0.0 Null0",
-    # Community-list (from Lab 06)
-    "no ip community-list standard CUSTOMER-ROUTES",
+    # Ensure community-list is present
     "ip community-list standard CUSTOMER-ROUTES permit 65003:500",
-    # Ensure ISP-A prefix-list present
-    "no ip prefix-list ISP-A-PREFIXES",
+    # Prefix-lists for per-prefix TE
     "ip prefix-list ISP-A-PREFIXES seq 10 permit 198.51.100.0/24",
     "ip prefix-list ISP-A-PREFIXES seq 20 permit 198.51.101.0/24",
     "ip prefix-list ISP-A-PREFIXES seq 30 permit 198.51.102.0/24",
-    # Ensure ISP-B prefix-list present
-    "no ip prefix-list ISP-B-PREFIXES",
     "ip prefix-list ISP-B-PREFIXES seq 10 permit 203.0.113.0/24",
     "ip prefix-list ISP-B-PREFIXES seq 20 permit 203.0.114.0/24",
     "ip prefix-list ISP-B-PREFIXES seq 30 permit 203.0.115.0/24",
-    # Ensure per-enterprise prefix-lists present
-    "no ip prefix-list PREFIX-192-168-1",
     "ip prefix-list PREFIX-192-168-1 seq 10 permit 192.168.1.0/24",
-    "no ip prefix-list PREFIX-192-168-2",
     "ip prefix-list PREFIX-192-168-2 seq 10 permit 192.168.2.0/24",
-    "no ip prefix-list PREFIX-192-168-3",
     "ip prefix-list PREFIX-192-168-3 seq 10 permit 192.168.3.0/24",
-    # Ensure conditional default prefix-list present
-    "no ip prefix-list COND-DEFAULT-CHECK",
+    "ip prefix-list ENTERPRISE-PREFIXES seq 10 permit 192.168.0.0/16 ge 24 le 24",
     "ip prefix-list COND-DEFAULT-CHECK seq 10 permit 198.51.100.0/24",
     # Rebuild LP-FROM-ISP-A
     "no route-map LP-FROM-ISP-A",
@@ -101,6 +90,8 @@ r1_commands = [
     "no route-map COND-DEFAULT",
     "route-map COND-DEFAULT permit 10",
     " match ip address prefix-list COND-DEFAULT-CHECK",
+    # Static route for conditional default
+    "ip route 0.0.0.0 0.0.0.0 Null0",
     # Apply BGP neighbor config
     "router bgp 65001",
     " neighbor 10.1.12.2 send-community",
@@ -189,11 +180,10 @@ restore("R5", 5005, r5_commands)
 print("\nAll devices restored to Lab 07 solution state.")
 print()
 print("Verify with:")
-print("  R1# show ip bgp summary              (3 BGP sessions active)")
-print("  R1# show ip bgp 198.51.100.0         (expect Local preference: 200 via ISP-A)")
-print("  R1# show ip bgp 203.0.113.0          (expect Local preference: 200 via ISP-B)")
-print("  R2# show ip bgp 192.168.2.0          (expect AS-path: 65001 65001 65001 65001)")
-print("  R2# show ip bgp 192.168.1.0          (expect Metric: 10)")
-print("  R3# show ip bgp 192.168.1.0          (expect AS-path: 65001 65001 65001 65001)")
-print("  R3# show ip bgp 192.168.2.0          (expect Metric: 10)")
-print("  R4# show ip bgp                      (expect 0.0.0.0/0 default route present)")
+print("  R4# show ip route 0.0.0.0                    (expect default via R1 iBGP)")
+print("  R2# show ip bgp 192.168.1.0                  (expect MED=10, no prepend)")
+print("  R2# show ip bgp 192.168.2.0                  (expect MED=100, AS-path prepended 3x)")
+print("  R3# show ip bgp 192.168.2.0                  (expect MED=10, no prepend)")
+print("  R3# show ip bgp 192.168.1.0                  (expect MED=100, AS-path prepended 3x)")
+print("  R1# show ip bgp 198.51.100.0                 (expect Local preference: 200)")
+print("  R1# show ip bgp 203.0.113.0                  (expect Local preference: 200)")

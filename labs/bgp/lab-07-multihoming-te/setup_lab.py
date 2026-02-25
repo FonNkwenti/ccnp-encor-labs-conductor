@@ -1,3 +1,7 @@
+"""
+BGP Lab 07 — Multihoming & Traffic Engineering
+Setup script: pushes initial configs to all 5 routers via Netmiko telnet.
+"""
 import sys
 import os
 

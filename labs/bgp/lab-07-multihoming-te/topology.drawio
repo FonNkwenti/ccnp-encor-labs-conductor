@@ -4,7 +4,7 @@
 
 <!-- R1: Enterprise Edge (center) -->
 <mxCell id="r1" value="R1&#xa;Enterprise Edge&#xa;Lo0: 172.16.1.1/32" style="shape=mxgraph.cisco.routers.router;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;fontColor=#ffffff;fontSize=11;fontStyle=1;" vertex="1" parent="1">
-  <mxGeometry x="490" y="200" width="70" height="70" as="geometry"/>
+  <mxGeometry x="490" y="280" width="70" height="70" as="geometry"/>
 </mxCell>
 
 <!-- R2: ISP-A (upper-right) -->
@@ -17,61 +17,61 @@
   <mxGeometry x="220" y="80" width="70" height="70" as="geometry"/>
 </mxCell>
 
-<!-- R4: Enterprise Internal (lower-center) -->
+<!-- R4: Enterprise Internal (lower-center, below R1) -->
 <mxCell id="r4" value="R4&#xa;Enterprise Internal&#xa;Lo0: 172.16.4.4/32" style="shape=mxgraph.cisco.routers.router;html=1;pointerEvents=1;dashed=0;fillColor=#67C6C0;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;fontColor=#000000;fontSize=11;fontStyle=1;" vertex="1" parent="1">
-  <mxGeometry x="360" y="390" width="70" height="70" as="geometry"/>
+  <mxGeometry x="490" y="500" width="70" height="70" as="geometry"/>
 </mxCell>
 
-<!-- R5: Downstream Customer (lower-left) -->
+<!-- R5: Downstream Customer (far left, connected to R3) -->
 <mxCell id="r5" value="R5&#xa;Downstream Customer&#xa;Lo0: 172.16.5.5/32" style="shape=mxgraph.cisco.routers.router;html=1;pointerEvents=1;dashed=0;fillColor=#67C6C0;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;fontColor=#000000;fontSize=11;fontStyle=1;" vertex="1" parent="1">
   <mxGeometry x="80" y="310" width="70" height="70" as="geometry"/>
 </mxCell>
 
 <!-- ==================== LINKS ==================== -->
 
-<!-- R1 <-> R2: 10.1.12.0/30 (eBGP AS65001-AS65002 Primary) -->
+<!-- R1 <-> R2: 10.1.12.0/30 (eBGP AS65001-AS65002) -->
 <mxCell id="link-r1-r2" style="edgeStyle=none;html=1;strokeColor=#FFFFFF;strokeWidth=2;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="r1" target="r2">
   <mxGeometry relative="1" as="geometry"/>
 </mxCell>
-<mxCell id="label-r1-r2" value="10.1.12.0/30&#xa;eBGP AS65001↔AS65002 (Primary)&#xa;R1:Fa1/0 .1 | R2:Fa0/0 .2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link-r1-r2">
+<mxCell id="label-r1-r2" value="10.1.12.0/30&#xa;eBGP AS65001&#x2194;AS65002&#xa;R1:Fa1/0 .1 | R2:Fa0/0 .2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link-r1-r2">
   <mxGeometry x="0.2" y="-1" relative="1" as="geometry"><Array as="offset"><mxPoint x="0" y="-14"/></Array></mxGeometry>
 </mxCell>
 
-<!-- R1 <-> R3: 10.1.13.0/30 (eBGP AS65001-AS65003 Backup) -->
+<!-- R1 <-> R3: 10.1.13.0/30 (eBGP AS65001-AS65003) -->
 <mxCell id="link-r1-r3" style="edgeStyle=none;html=1;strokeColor=#FFFFFF;strokeWidth=2;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="r1" target="r3">
   <mxGeometry relative="1" as="geometry"/>
 </mxCell>
-<mxCell id="label-r1-r3" value="10.1.13.0/30&#xa;eBGP AS65001↔AS65003 (Backup)&#xa;R1:Fa1/1 .1 | R3:Fa1/0 .2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link-r1-r3">
+<mxCell id="label-r1-r3" value="10.1.13.0/30&#xa;eBGP AS65001&#x2194;AS65003&#xa;R1:Fa1/1 .1 | R3:Fa1/0 .2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link-r1-r3">
   <mxGeometry x="0.2" y="-1" relative="1" as="geometry"><Array as="offset"><mxPoint x="0" y="-14"/></Array></mxGeometry>
 </mxCell>
 
-<!-- R2 <-> R3: 10.1.23.0/30 (eBGP ISP peering) -->
+<!-- R2 <-> R3: 10.1.23.0/30 (eBGP AS65002-AS65003) -->
 <mxCell id="link-r2-r3" style="edgeStyle=none;html=1;strokeColor=#FFFFFF;strokeWidth=2;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="r2" target="r3">
   <mxGeometry relative="1" as="geometry"/>
 </mxCell>
-<mxCell id="label-r2-r3" value="10.1.23.0/30&#xa;eBGP AS65002↔AS65003&#xa;R2:Fa1/0 .1 | R3:Fa0/0 .2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link-r2-r3">
+<mxCell id="label-r2-r3" value="10.1.23.0/30&#xa;eBGP AS65002&#x2194;AS65003&#xa;R2:Fa1/0 .1 | R3:Fa0/0 .2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link-r2-r3">
   <mxGeometry x="0.5" y="0" relative="1" as="geometry"><Array as="offset"><mxPoint x="0" y="-14"/></Array></mxGeometry>
 </mxCell>
 
-<!-- R1 <-> R4: 10.1.14.0/30 (iBGP + OSPF) -->
-<mxCell id="link-r1-r4" style="edgeStyle=none;html=1;strokeColor=#FFFFFF;strokeWidth=2;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="r1" target="r4">
+<!-- R1 <-> R4: 10.1.14.0/30 (iBGP + OSPF AS65001) -->
+<mxCell id="link-r1-r4" style="edgeStyle=none;html=1;strokeColor=#FFFFFF;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="r1" target="r4">
   <mxGeometry relative="1" as="geometry"/>
 </mxCell>
-<mxCell id="label-r1-r4" value="10.1.14.0/30&#xa;iBGP+OSPF AS65001&#xa;R1:Fa0/0 .1 | R4:Fa0/0 .2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link-r1-r4">
-  <mxGeometry x="0.5" y="0" relative="1" as="geometry"><Array as="offset"><mxPoint x="0" y="-14"/></Array></mxGeometry>
+<mxCell id="label-r1-r4" value="10.1.14.0/30&#xa;iBGP + OSPF AS65001&#xa;R1:Fa0/0 .1 | R4:Fa0/0 .2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link-r1-r4">
+  <mxGeometry x="0.5" y="0" relative="1" as="geometry"><Array as="offset"><mxPoint x="30" y="0"/></Array></mxGeometry>
 </mxCell>
 
 <!-- R3 <-> R5: 10.1.35.0/30 (eBGP AS65003-AS65004) -->
 <mxCell id="link-r3-r5" style="edgeStyle=none;html=1;strokeColor=#FFFFFF;strokeWidth=2;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="r3" target="r5">
   <mxGeometry relative="1" as="geometry"/>
 </mxCell>
-<mxCell id="label-r3-r5" value="10.1.35.0/30&#xa;eBGP AS65003↔AS65004&#xa;R3:Fa1/1 .1 | R5:Fa0/0 .2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link-r3-r5">
-  <mxGeometry x="0.5" y="0" relative="1" as="geometry"><Array as="offset"><mxPoint x="30" y="0"/></Array></mxGeometry>
+<mxCell id="label-r3-r5" value="10.1.35.0/30&#xa;eBGP AS65003&#x2194;AS65004&#xa;R3:Fa1/1 .1 | R5:Fa0/0 .2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link-r3-r5">
+  <mxGeometry x="0.5" y="0" relative="1" as="geometry"><Array as="offset"><mxPoint x="-40" y="0"/></Array></mxGeometry>
 </mxCell>
 
 <!-- ==================== LEGEND ==================== -->
-<mxCell id="legend" value="&lt;b&gt;Legend&lt;/b&gt;&#xa;AS 65001 — Enterprise (R1, R4)&#xa;AS 65002 — ISP-A Primary (R2)&#xa;AS 65003 — ISP-B Backup (R3)&#xa;AS 65004 — Downstream Customer (R5)&#xa;&#xa;TE Policies (R1):&#xa;LP-FROM-ISP-A: ISP-A prefixes LP=200&#xa;LP-FROM-ISP-B: ISP-B prefixes LP=200&#xa;TE-TO-ISP-A: MED + prepend outbound&#xa;TE-TO-ISP-B: MED + prepend outbound&#xa;COND-DEFAULT: default-originate to R4&#xa;&#xa;c7200: R1, R2, R3&#xa;c3725: R4, R5" style="text;html=1;strokeColor=none;fillColor=#000000;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;spacingBottom=6;fontSize=10;fontColor=#FFFFFF;rounded=1;" vertex="1" parent="1">
-  <mxGeometry x="820" y="360" width="320" height="250" as="geometry"/>
+<mxCell id="legend" value="&lt;b&gt;Legend&lt;/b&gt;&#xa;AS 65001 — Enterprise (R1, R4)&#xa;AS 65002 — ISP-A (R2) — Primary&#xa;AS 65003 — ISP-B (R3) — Backup&#xa;AS 65004 — Downstream Customer (R5)&#xa;&#xa;Traffic Engineering:&#xa;192.168.1 preferred via ISP-A (MED 10)&#xa;192.168.2 preferred via ISP-B (MED 10)&#xa;192.168.1 prepended 3x to ISP-B&#xa;192.168.2 prepended 3x to ISP-A&#xa;&#xa;c7200: R1, R2, R3&#xa;c3725: R4, R5" style="text;html=1;strokeColor=none;fillColor=#000000;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;spacingBottom=6;fontSize=10;fontColor=#FFFFFF;rounded=1;" vertex="1" parent="1">
+  <mxGeometry x="830" y="380" width="310" height="230" as="geometry"/>
 </mxCell>
 
 </root></mxGraphModel></diagram></mxfile>
