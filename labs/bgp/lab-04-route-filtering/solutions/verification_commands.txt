@@ -1,0 +1,62 @@
+BGP Lab 04 - Route Filtering with Prefix-Lists
+Verification Commands
+=====================================================================
+
+--- R1: Verify Soft Reconfiguration & Prefix-List Filters ---
+
+! Check received routes from R2 before filtering (raw BGP updates stored)
+R1# show ip bgp neighbors 10.1.12.2 received-routes
+
+! Check which routes R1 accepted from R2 after applying the inbound prefix-list
+R1# show ip bgp neighbors 10.1.12.2 routes
+
+! Confirm only 198.51.100.0/24 is accepted from R2 (not .101 or .102)
+R1# show ip bgp
+R1# show ip prefix-list FROM-ISP-A
+
+! Check what R1 is advertising to R3 (should be only 192.168.1.0/24)
+R1# show ip bgp neighbors 10.1.13.2 advertised-routes
+
+! Check received routes from R3 (203.0.115.0/24 should be absent after filtering)
+R1# show ip bgp neighbors 10.1.13.2 received-routes
+R1# show ip bgp neighbors 10.1.13.2 routes
+
+! View all prefix-lists configured
+R1# show ip prefix-list
+
+--- R4: Verify Distribute-List ---
+
+! Confirm R4 only advertises 10.4.1.0/24 and 10.4.2.0/24 to R1 (not 172.16.4.4/32)
+R1# show ip bgp neighbors 172.16.4.4 received-routes
+
+! Check the ACL used for distribute-list
+R4# show ip access-lists ENTERPRISE-INTERNAL
+
+! Verify R4 still receives external prefixes from R1 (filtering is outbound only)
+R4# show ip bgp
+R4# show ip route bgp
+
+--- Soft Reset Commands ---
+
+! Apply inbound policy changes without resetting the BGP session
+R1# clear ip bgp 10.1.12.2 soft in
+R1# clear ip bgp 10.1.13.2 soft in
+
+! Apply outbound policy changes without resetting the BGP session
+R1# clear ip bgp 10.1.13.2 soft out
+
+! Apply outbound policy on R4 without disrupting the iBGP session
+R4# clear ip bgp 172.16.1.1 soft out
+
+--- Global Verification ---
+
+R1# show ip bgp summary
+R2# show ip bgp summary
+R3# show ip bgp summary
+R4# show ip bgp summary
+
+! Expected results:
+! R1 BGP table: 198.51.100.0/24 present; 198.51.101.0 and 198.51.102.0 ABSENT
+! R1 BGP table: 203.0.113.0/24 and 203.0.114.0/24 present; 203.0.115.0/24 ABSENT
+! R3 advertised-routes from R1: only 192.168.1.0/24 (not .2 or .3)
+! R1 received-routes from R4: 10.4.1.0/24 and 10.4.2.0/24 ONLY (not 172.16.4.4/32)
