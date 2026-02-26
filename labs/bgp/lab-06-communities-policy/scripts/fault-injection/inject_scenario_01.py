@@ -1,37 +1,30 @@
 """
 BGP Lab 06 — Fault Injection: Scenario 01
-Ticket: Communities not propagating to ISP-A (R2)
-Fault:  Removes 'send-community' from R1's neighbor statement for R2 (10.1.12.2)
-        Communities are then silently dropped and R2 never sees 65001:100 on
-        enterprise prefixes.
-Target: R1 (port 5001)
+Ticket: R5's routes arrive at R3 but local-preference is 100, not 180
+Fault:  Remove the community-list R5-PREFERRED on R3, breaking the
+        match community clause in POLICY-FROM-R5 (sequences fall through
+        to the permit-all tail; LP remains at default 100)
+Target: R3 (port 5003)
 """
 from netmiko import ConnectHandler
 
 device = {
     "device_type": "cisco_ios_telnet",
     "host": "127.0.0.1",
-    "port": 5001,
+    "port": 5003,
     "username": "",
     "password": "",
     "secret": "",
 }
 
 fault_commands = [
-    "router bgp 65001",
-    " no neighbor 10.1.12.2 send-community",
-    "end",
+    "no ip community-list standard R5-PREFERRED",
 ]
 
-print("Injecting Scenario 01: removing send-community from R1 neighbor 10.1.12.2...")
+print("Injecting Scenario 01: removing R5-PREFERRED community-list on R3...")
 with ConnectHandler(**device) as conn:
     conn.enable()
     conn.send_config_set(fault_commands)
-    conn.send_command("clear ip bgp 10.1.12.2 soft out")
+    conn.send_command("clear ip bgp 10.1.35.2 soft in")
 print("Fault injected.")
-print()
-print("Verify the fault:")
-print("  R1# show bgp neighbors 10.1.12.2 | include Community")
-print("  (should show nothing, or 'Community attribute not sent')")
-print("  R2# show ip bgp 192.168.1.0")
-print("  (should show NO Community field)")
+print("Verify: 'show ip bgp 10.4.1.0' on R3 — local-pref should drop to 100.")

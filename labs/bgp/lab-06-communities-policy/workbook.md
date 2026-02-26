@@ -1,986 +1,703 @@
-# BGP Lab 06 — Communities & Policy Control
+# BGP Lab 06 — BGP Communities & Policy Control
 
-**Chapter:** BGP | **Lab Number:** 06 | **Difficulty:** Advanced
+## Table of Contents
+
+1. [Concepts & Skills Covered](#1-concepts--skills-covered)
+2. [Topology & Scenario](#2-topology--scenario)
+3. [Hardware & Environment Specifications](#3-hardware--environment-specifications)
+4. [Base Configuration](#4-base-configuration)
+5. [Lab Challenge: Core Implementation](#5-lab-challenge-core-implementation)
+6. [Verification & Analysis](#6-verification--analysis)
+7. [Verification Cheatsheet](#7-verification-cheatsheet)
+8. [Solutions (Spoiler Alert!)](#8-solutions-spoiler-alert)
+9. [Troubleshooting Scenarios](#9-troubleshooting-scenarios)
+10. [Lab Completion Checklist](#10-lab-completion-checklist)
 
 ---
 
 ## 1. Concepts & Skills Covered
 
-This lab introduces BGP Communities — one of the most powerful tools for scalable, flexible routing policy. You will build on the AS-path manipulation and route-map skills from Lab 05 and extend them with community tagging, propagation, and community-based matching.
+This lab addresses the following CCNP ENCOR 350-401 exam blueprint bullets:
 
-### Core Topics
+- **3.2.c** — Configure and verify eBGP between directly connected neighbors (best path selection algorithm and neighbor relationships)
+- **3.2.d** — Describe policy-based routing
 
-| Topic | Description |
-|---|---|
-| BGP Standard Communities | 32-bit values in `AA:NN` format for route tagging |
-| `send-community` | Enabling community propagation to a BGP neighbor |
-| `ip community-list` | Matching routes by their community values |
-| `set community` | Tagging routes with one or more communities in a route-map |
-| Well-Known Community: `no-export` | Preventing re-advertisement beyond an AS boundary |
-| Well-Known Community: `no-advertise` | Preventing advertisement to any BGP neighbor |
-| Community-based local-preference | Setting inbound preference using community match instead of AS-path |
-| eBGP with downstream customers | Peering with AS65004 (R5) and tagging inbound customer routes |
-| `additive` keyword | Adding communities without replacing existing ones |
+**BGP Community topics explored:**
 
-### CCNP ENCOR Exam Relevance
-
-Communities appear directly in the 350-401 blueprint under BGP path selection and policy. Expect questions on:
-- What happens when `send-community` is missing
-- The meaning of `no-export` and `no-advertise`
-- How `ip community-list` and `route-map` combine to match and act on communities
-- The `additive` keyword and why it matters
+- Standard BGP community format (`AA:NN`) and how communities are carried as a path attribute
+- Well-known communities: `no-export`, `no-advertise`, and `local-AS` — and how each restricts re-advertisement
+- Community propagation with `send-community` (the attribute is stripped by default without this command)
+- Community lists (`ip community-list`) for matching communities in route-maps
+- Building multi-stage route-maps that both set communities and manipulate other attributes (local-preference, AS-path)
+- Using communities to implement provider-customer policy at AS boundaries
 
 ---
 
 ## 2. Topology & Scenario
 
-### Scenario
+### Enterprise Scenario
 
-You are the network engineer for an enterprise (AS 65001) with dual-ISP connectivity. The network has been operating since Lab 05 with AS-path manipulation and local-preference policies. Management now requires you to implement a BGP communities strategy to make policy more scalable and to control how routes propagate beyond AS boundaries.
+Acme Corp (AS 65001) is dual-homed to two ISPs: ISP-A (AS 65002) and ISP-B (AS 65003). A new downstream customer — DataStream Ltd (AS 65004, R5) — has contracted ISP-B for connectivity.
 
-A new downstream customer (R5, AS 65004) has connected to ISP-B (R3). You must ensure that customer routes are treated with the correct priority in the enterprise and that the enterprise's internal prefixes are not advertised by the ISPs to third parties.
+The network team must implement a community-based policy framework:
 
-### Topology Diagram
+1. Tag outbound enterprise prefixes so ISPs can apply their own policy based on Acme's intent
+2. Prevent ISP-B's internal experimental prefix from leaking beyond DataStream
+3. Allow DataStream to signal its preferred routes to ISP-B using community tags
+4. Prevent ISP-A's internal prefix from leaving the enterprise AS boundary
+
+### ASCII Topology
 
 ```
-                  AS 65002 (ISP-A)
-                      R2
-                 172.16.2.2
-              Fa0/0        Fa1/0
-              .2                .1
-    10.1.12.0/30          10.1.23.0/30
-              .1                .2
-           Fa1/0            Fa0/0
-    AS 65001      R1        R3          AS 65003 (ISP-B)
-    Enterprise  172.16.1.1  172.16.3.3
-    Edge        Fa1/1    Fa1/0          Fa1/1
-                 .1        .2             .1
-           10.1.13.0/30              10.1.35.0/30
-                                           .2
-                 Fa0/0                  Fa0/0
-                   .1                    R5
-              10.1.14.0/30         172.16.5.5
-                   .2             AS 65004
-                 Fa0/0       (Downstream Customer)
-                   R4
-              172.16.4.4
-           AS 65001 (Internal)
+         ┌──────────────────────────────────────┐
+         │                 R1                   │
+         │          (Enterprise Edge)           │
+         │         Lo0: 172.16.1.1/32           │
+         │              AS: 65001               │
+         └───────┬──────────────┬──────────┬───┘
+           Fa0/0 │        Fa1/0 │    Fa1/1 │
+     10.1.14.1/30│  10.1.12.1/30│          │10.1.13.1/30
+                 │              │          │
+     10.1.14.2/30│  10.1.12.2/30│          │10.1.13.2/30
+           Fa0/0 │        Fa0/0 │    Fa1/0 │
+    ┌────────────┴──┐    ┌──────┴──────────┴───────────────────┐
+    │      R4       │    │      R2          │      R3           │
+    │  (Enterprise  │    │   (ISP-A)        │   (ISP-B)        │
+    │   Internal)   │    │  AS: 65002       │  AS: 65003        │
+    │   AS: 65001   │    │Lo0:172.16.2.2/32 │Lo0:172.16.3.3/32 │
+    │Lo0:172.16.4.4 │    └──────┬───────────┴───────────┬──────┘
+    └───────────────┘      Fa1/0│10.1.23.1  10.1.23.2   │Fa0/0
+                                └───── 10.1.23.0/30 ─────┘
+                                                          │Fa1/1
+                                               10.1.35.1/30│
+                                                           │
+                                               10.1.35.2/30│
+                                                     Fa0/0 │
+                                          ┌────────────────┴───────┐
+                                          │           R5            │
+                                          │  (Downstream Customer)  │
+                                          │       AS: 65004         │
+                                          │  Lo0: 172.16.5.5/32     │
+                                          └─────────────────────────┘
 ```
 
-### Addressing Summary
+**BGP Session Summary:**
 
-| Device | Interface | IP Address | Description |
-|---|---|---|---|
-| R1 | Loopback0 | 172.16.1.1/32 | Router-ID |
-| R1 | Loopback1 | 192.168.1.1/24 | Enterprise subnet |
-| R1 | Loopback2 | 192.168.2.1/24 | Enterprise subnet |
-| R1 | Loopback3 | 192.168.3.1/24 | Enterprise subnet |
-| R1 | Fa0/0 | 10.1.14.1/30 | Link to R4 |
-| R1 | Fa1/0 | 10.1.12.1/30 | Link to R2 (ISP-A) |
-| R1 | Fa1/1 | 10.1.13.1/30 | Link to R3 (ISP-B) |
-| R2 | Loopback0 | 172.16.2.2/32 | Router-ID |
-| R2 | Loopback1-3 | 198.51.100-102.1/24 | ISP-A prefixes |
-| R2 | Fa0/0 | 10.1.12.2/30 | Link to R1 |
-| R2 | Fa1/0 | 10.1.23.1/30 | Link to R3 |
-| R3 | Loopback0 | 172.16.3.3/32 | Router-ID |
-| R3 | Loopback1-3 | 203.0.113-115.1/24 | ISP-B prefixes |
-| R3 | Fa0/0 | 10.1.23.2/30 | Link to R2 |
-| R3 | Fa1/0 | 10.1.13.2/30 | Link to R1 |
-| R3 | Fa1/1 | 10.1.35.1/30 | Link to R5 |
-| R4 | Loopback0 | 172.16.4.4/32 | Router-ID |
-| R4 | Loopback1 | 10.4.1.1/24 | Enterprise internal subnet |
-| R4 | Loopback2 | 10.4.2.1/24 | Enterprise internal subnet |
-| R4 | Fa0/0 | 10.1.14.2/30 | Link to R1 |
-| R5 | Loopback0 | 172.16.5.5/32 | Router-ID |
-| R5 | Loopback1 | 10.5.1.1/24 | Customer subnet |
-| R5 | Loopback2 | 10.5.2.1/24 | Customer subnet |
-| R5 | Fa0/0 | 10.1.35.2/30 | Link to R3 |
-
-### BGP Session Summary
-
-| Session | Type | AS Pair | Interface |
-|---|---|---|---|
-| R1 — R2 | eBGP | 65001 — 65002 | 10.1.12.0/30 |
-| R1 — R3 | eBGP | 65001 — 65003 | 10.1.13.0/30 |
-| R1 — R4 | iBGP | 65001 (loopback) | via OSPF |
-| R2 — R3 | eBGP | 65002 — 65003 | 10.1.23.0/30 |
-| R3 — R5 | eBGP | 65003 — 65004 | 10.1.35.0/30 |
+| Session | Type | Peers |
+|---------|------|-------|
+| R1 — R2 | eBGP | 10.1.12.1 ↔ 10.1.12.2 |
+| R1 — R3 | eBGP | 10.1.13.1 ↔ 10.1.13.2 |
+| R1 — R4 | iBGP | Lo0 ↔ Lo0 (65001) |
+| R2 — R3 | eBGP | 10.1.23.1 ↔ 10.1.23.2 |
+| R3 — R5 | eBGP | 10.1.35.1 ↔ 10.1.35.2 |
 
 ---
 
 ## 3. Hardware & Environment Specifications
 
-### GNS3 Device Table
+### Device Inventory
 
-| Device | Role | Platform | RAM | IOS |
-|---|---|---|---|---|
-| R1 | Enterprise Edge | c7200 | 256 MB | 12.4T |
-| R2 | ISP-A | c7200 | 256 MB | 12.4T |
-| R3 | ISP-B | c7200 | 256 MB | 12.4T |
-| R4 | Enterprise Internal | c3725 | 128 MB | 12.4 |
-| R5 | Downstream Customer | c3725 | 128 MB | 12.4 |
+| Device | Platform | Role | AS | Loopback0 |
+|--------|----------|------|----|-----------|
+| R1 | c7200 | Enterprise Edge | 65001 | 172.16.1.1/32 |
+| R2 | c7200 | ISP-A | 65002 | 172.16.2.2/32 |
+| R3 | c7200 | ISP-B | 65003 | 172.16.3.3/32 |
+| R4 | c3725 | Enterprise Internal | 65001 | 172.16.4.4/32 |
+| R5 | c3725 | Downstream Customer | 65004 | 172.16.5.5/32 |
+
+### Cabling Table
+
+| Link | Source | Target | Subnet | Purpose |
+|------|--------|--------|--------|---------|
+| L1 | R1:Fa1/0 | R2:Fa0/0 | 10.1.12.0/30 | Enterprise to ISP-A (eBGP) |
+| L2 | R2:Fa1/0 | R3:Fa0/0 | 10.1.23.0/30 | ISP-A to ISP-B (eBGP) |
+| L3 | R1:Fa1/1 | R3:Fa1/0 | 10.1.13.0/30 | Enterprise to ISP-B (eBGP) |
+| L4 | R1:Fa0/0 | R4:Fa0/0 | 10.1.14.0/30 | Enterprise Edge to Internal (iBGP) |
+| L5 | R3:Fa1/1 | R5:Fa0/0 | 10.1.35.0/30 | ISP-B to Downstream Customer (eBGP) |
 
 ### Console Access Table
 
-| Device | Telnet Port |
-|---|---|
-| R1 | 5001 |
-| R2 | 5002 |
-| R3 | 5003 |
-| R4 | 5004 |
-| R5 | 5005 |
-
-```bash
-# Connect to any router
-telnet 127.0.0.1 5001   # R1
-telnet 127.0.0.1 5002   # R2
-telnet 127.0.0.1 5003   # R3
-telnet 127.0.0.1 5004   # R4
-telnet 127.0.0.1 5005   # R5
-```
-
-### Platform Notes
-
-- **c7200**: Used for R1, R2, R3. Supports Fa0/0, Fa1/0, Fa1/1, Gi3/0, s2/0-s2/3.
-- **c3725**: Used for R4, R5. Supports Fa0/0, Fa0/1, Fa1/0–Fa1/15 (switch), s2/0-s2/3.
-- All routers run Cisco IOS 12.4 or 12.4T.
-- BGP communities require `send-community` per neighbor — it is NOT enabled by default.
+| Device | Console Port | Connection Command |
+|--------|-------------|-------------------|
+| R1 | 5001 | `telnet 127.0.0.1 5001` |
+| R2 | 5002 | `telnet 127.0.0.1 5002` |
+| R3 | 5003 | `telnet 127.0.0.1 5003` |
+| R4 | 5004 | `telnet 127.0.0.1 5004` |
+| R5 | 5005 | `telnet 127.0.0.1 5005` |
 
 ---
 
 ## 4. Base Configuration
 
-The initial configuration for this lab is the complete solution from Lab 05 (AS-path manipulation and route-map policies). R5 is added as a new device with only IP addressing — no BGP.
+Run `python3 setup_lab.py` to push the initial configurations to all five routers.
 
-### What is already configured
+### What IS pre-loaded
 
-**All routers (inherited from Lab 05):**
-- Interface IP addresses
-- OSPF between R1 and R4 (area 0)
-- All eBGP and iBGP sessions (R1-R2, R1-R3, R1-R4, R2-R3)
-- R1 route-maps: SET-LP-200-ISP-A, POLICY-ISP-B-IN, PREPEND-TO-ISP-B
-- R1 AS-path ACLs and prefix-lists
-- R4 distribute-list filtering internal prefixes
+- Hostnames and interface IP addresses on all devices
+- OSPF process on R1 and R4 (loopback and link between them — required for iBGP next-hop reachability)
+- BGP process and neighbor statements on R1, R2, R3, and R4 (from Lab 05 solutions)
+- AS-path access-lists and prefix-lists on R1 (from Lab 05)
+- Existing route-maps from Lab 05: `SET-LP-200-ISP-A`, `POLICY-ISP-B-IN`, `PREPEND-TO-ISP-B`
 
-**R5 (new device):**
-- Loopback0: 172.16.5.5/32
-- Loopback1: 10.5.1.1/24
-- Loopback2: 10.5.2.1/24
-- Fa0/0: 10.1.35.2/30 (link to R3)
-- NO BGP configured yet
+### What is NOT pre-loaded (student must configure)
 
-### Load Initial Configs
-
-```bash
-# Option 1: Automated setup (recommended)
-python3 labs/bgp/lab-06-communities-policy/setup_lab.py
-
-# Option 2: Manual — paste each router's initial-configs/*.cfg via console
-```
-
-### Verify Base State
-
-After loading, confirm that the Lab 05 BGP state is intact on R1:
-
-```
-R1# show ip bgp summary
-R1# show ip bgp
-R1# show ip ospf neighbor
-```
-
-Confirm R5 is reachable from R3:
-
-```
-R3# ping 10.1.35.2
-```
+- Community tagging route-maps on R1 (outbound to ISP-A and ISP-B)
+- `send-community` activation on R1's eBGP sessions
+- Well-known `local-AS` community tagging on R1 for the ISP-A internal prefix
+- BGP process and neighbor relationship on R5 (R5 is new — no BGP pre-configured)
+- Community tagging route-map on R5 (outbound to R3)
+- `send-community` on R5's eBGP session
+- Community-list and community-based route-maps on R3 (inbound from R5, outbound to R5)
+- `no-export` community tagging on R3 for the ISP-B experimental prefix
 
 ---
 
-## 5. Lab Challenge
+## 5. Lab Challenge: Core Implementation
 
-Complete all five tasks in order. Each task builds on the previous one.
+### Task 1: Tag Enterprise Prefixes with Standard Communities
 
----
+On R1, implement outbound community tagging so downstream ISPs can apply their own policy based on Acme's intent:
 
-### Task 1 — Enable Community Propagation on All BGP Sessions
+- Create a new outbound route-map for the R2 (ISP-A) neighbor. For enterprise prefixes matching the `ENTERPRISE-PREFIXES` prefix-list, set a standard community value of `65001:100`. All other prefixes pass through without a community tag.
+- Modify the existing outbound route-map applied to the R3 (ISP-B) neighbor. For enterprise prefixes, set community `65001:200` in addition to the existing AS-path prepend. All other prefixes pass through unchanged.
+- Enable community propagation on both eBGP sessions (R2 and R3). Without this, the community attribute is stripped before the UPDATE message leaves R1.
 
-BGP communities are silently dropped by default. You must explicitly enable `send-community` on every BGP neighbor that should receive or forward communities.
-
-**Requirements:**
-- Enable `send-community` on ALL BGP neighbor statements, on ALL routers (R1, R2, R3, R4, R5)
-- This includes iBGP sessions (R1-R4) and all eBGP sessions
-
-**Hint:** The command goes under `router bgp` for each neighbor:
-```
-router bgp <ASN>
- neighbor <IP> send-community
-```
-
-**Verification:**
-```
-R1# show bgp neighbors 10.1.12.2 | include Community
-```
-You should see: `Community attribute sent to this neighbor`
+**Verification:** `show ip bgp 192.168.1.0` on R2 should show `Community: 65001:100` in the prefix detail. On R3, the same prefix should show `Community: 65001:200`.
 
 ---
 
-### Task 2 — Tag Enterprise Prefixes with Community 65001:100 on R1
+### Task 2: Apply the no-export Well-Known Community on R3
 
-R1 should tag the three enterprise /24 prefixes (192.168.1.0, 192.168.2.0, 192.168.3.0) with standard community `65001:100` when advertising them outbound to both ISP-A (R2) and ISP-B (R3).
+ISP-B's 203.0.115.0/24 prefix is an internal experimental range not intended for re-advertisement. Configure R3 to enforce this:
 
-**Requirements:**
-- Create a prefix-list matching 192.168.0.0/16 ge 24 le 24 (named ENTERPRISE-PREFIXES — already exists)
-- Create a route-map named SET-COMMUNITY-OUT:
-  - Sequence 10: match ENTERPRISE-PREFIXES, set community 65001:100 additive
-  - Sequence 20: permit all (pass-through)
-- Apply SET-COMMUNITY-OUT outbound to both R2 (10.1.12.2) and R3 (10.1.13.2)
+- Create an outbound route-map on R3 applied to the R5 neighbor. For the 203.0.115.0/24 prefix, set the well-known `no-export` community before advertising it to R5.
+- All other prefixes must still be advertised to R5 without modification.
+- Enable community propagation so R5 receives the community attribute.
 
-**Why `additive`?**
-The `additive` keyword appends the community to any existing communities on the prefix rather than replacing them. Always use `additive` unless you specifically want to overwrite.
-
-**Verification:**
-```
-R2# show ip bgp 192.168.1.0
-  Community: 65001:100
-```
+**Verification:** `show ip bgp 203.0.115.0` on R5 should show `Community: no-export`. Confirm that R5 cannot re-advertise this prefix externally (it will not appear in any eBGP UPDATE sent by R5).
 
 ---
 
-### Task 3 — Apply `no-export` to R4's Internal Prefixes
+### Task 3: Community-Based Inbound Policy on R3 from R5
 
-R4 advertises 10.4.1.0/24 and 10.4.2.0/24 to R1 via iBGP. These are internal enterprise routes and must NOT be re-advertised by ISPs to the internet. The `no-export` well-known community prevents advertisement beyond the receiving AS boundary.
+DataStream (R5, AS 65004) signals preferred routes using community tags. Configure both ends of the R3–R5 session:
 
-**Requirements:**
-- On R4: create `ip access-list standard ENTERPRISE-INTERNAL` matching 10.4.1.0/24 and 10.4.2.0/24 (already exists)
-- Create route-map SET-NO-EXPORT:
-  - Sequence 10: match ip address ENTERPRISE-INTERNAL, set community no-export additive
-  - Sequence 20: permit all
-- Remove the existing `distribute-list ENTERPRISE-INTERNAL out` from the iBGP neighbor
-- Apply `neighbor 172.16.1.1 route-map SET-NO-EXPORT out` instead
-- Add `neighbor 172.16.1.1 send-community` on R4
+- On R5, configure a BGP process with AS 65004 and establish an eBGP session to R3 (10.1.35.1). Advertise R5's loopback and customer prefixes (10.4.1.0/24 and 10.4.2.0/24).
+- On R5, create an outbound route-map that sets community `65004:100` on the customer prefixes (10.4.1.0/24 and 10.4.2.0/24). Enable community propagation to R3.
+- On R3, create a community-list named `R5-PREFERRED` that matches community value `65004:100`.
+- On R3, create an inbound route-map for the R5 neighbor. Routes matching `R5-PREFERRED` receive a local-preference of 180. All other routes pass through.
+- Enable soft-reconfiguration inbound on R3's R5 session so policy changes can be applied without hard resets.
 
-**Verification:**
-```
-R1# show ip bgp 10.4.1.0
-  Community: no-export
-
-R2# show ip bgp 10.4.1.0
-  (should NOT appear — R1 must not forward no-export routes to eBGP peers)
-```
+**Verification:** `show ip bgp 10.4.1.0` on R3 should show `Local preference: 180` and `Community: 65004:100`. The BGP table on R3 should show R5's routes as best (highest local-pref relative to any other path).
 
 ---
 
-### Task 4 — Establish R5 eBGP Session and Tag Customer Routes on R3
+### Task 4: Tag ISP-A Internal Prefix with local-AS Community
 
-R5 (AS 65004) is a downstream customer of ISP-B. R3 must establish eBGP with R5, accept R5's prefixes, and tag them with community `65003:500` so that upstream routers can identify and apply policy to customer routes.
+ISP-A advertises 198.51.102.0/24 — an internal range that should not leave AS 65001. Configure R1 to enforce this at the eBGP boundary:
 
-**Requirements on R3:**
-- Add eBGP neighbor: `neighbor 10.1.35.2 remote-as 65004`
-- Enable `send-community` to R5
-- Enable `soft-reconfiguration inbound` for R5
-- Create route-map TAG-CUSTOMER-IN:
-  - Sequence 10: no match clause (match all), set community 65003:500 additive
-- Apply TAG-CUSTOMER-IN inbound from R5
+- Modify the existing inbound route-map on R1 for the R2 (ISP-A) neighbor. Add a new sequence that matches 198.51.102.0/24 (using a new prefix-list named `ISP-A-INTERNAL`) and sets the well-known `local-AS` community, in addition to setting local-preference 200.
+- The existing sequence that sets local-preference 200 for all other ISP-A routes must continue to function — add it as a subsequent sequence in the same route-map.
+- Perform a soft inbound reset for the R2 session so the updated policy takes effect immediately without dropping the session.
 
-**Requirements on R5:**
-- Configure `router bgp 65004`
-- Set `bgp router-id 172.16.5.5`
-- Add neighbor: `neighbor 10.1.35.1 remote-as 65003`
-- Enable `send-community`
-- Advertise: 172.16.5.5/32, 10.5.1.0/24, 10.5.2.0/24
-
-**Verification:**
-```
-R3# show ip bgp summary
-  (R5 neighbor should show Active -> Established)
-
-R3# show ip bgp 10.5.1.0
-  Community: 65003:500
-
-R3# show ip bgp neighbors 10.1.35.2 received-routes
-```
-
----
-
-### Task 5 — Apply Community-Based Policy on R1 for Customer Routes
-
-R1 currently applies local-preference 150 to all ISP-B routes. Customer routes tagged with `65003:500` should receive a lower local-preference of 120 (making them less preferred than direct ISP-B routes at 150, and far less preferred than ISP-A routes at 200).
-
-**Requirements on R1:**
-- Create an `ip community-list standard CUSTOMER-ROUTES permit 65003:500`
-- Modify route-map POLICY-ISP-B-IN to add a new entry BEFORE the existing sequence 10:
-  - Sequence 8: match community CUSTOMER-ROUTES, set local-preference 120
-- The existing deny 5 (203.0.115.0/24) and permit 10 (ISP-B routes at LP 150) must remain
-
-**Final POLICY-ISP-B-IN structure:**
-```
-route-map POLICY-ISP-B-IN deny 5     <- deny 203.0.115.0/24
-route-map POLICY-ISP-B-IN permit 8   <- customer routes: LP 120
-route-map POLICY-ISP-B-IN permit 10  <- ISP-B routes: LP 150
-route-map POLICY-ISP-B-IN permit 20  <- pass-through
-```
-
-**Verification:**
-```
-R1# show ip bgp 10.5.1.0
-  Local preference: 120
-
-R1# show ip bgp 203.0.113.0
-  Local preference: 150
-
-R1# show ip bgp 198.51.100.0
-  Local preference: 200
-```
+**Verification:** `show ip bgp 198.51.102.0` on R1 should show `Community: local-AS` and `Local preference: 200`. Confirm the prefix does not appear in R3's or R5's BGP table (the local-AS community prevents eBGP re-advertisement).
 
 ---
 
 ## 6. Verification & Analysis
 
-### Full End-to-End Verification Sequence
-
-#### Step 1: Confirm all BGP sessions are Established
-
-```
-R1# show ip bgp summary
-BGP router identifier 172.16.1.1, local AS number 65001
-Neighbor        V    AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd
-10.1.12.2       4 65002      XX      XX        X    0    0  HH:MM:SS       4
-10.1.13.2       4 65003      XX      XX        X    0    0  HH:MM:SS       7
-172.16.4.4      4 65001      XX      XX        X    0    0  HH:MM:SS       3
-
-R3# show ip bgp summary
-Neighbor        V    AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd
-10.1.13.1       4 65001      XX      XX        X    0    0  HH:MM:SS       4
-10.1.23.1       4 65002      XX      XX        X    0    0  HH:MM:SS       4
-10.1.35.2       4 65004      XX      XX        X    0    0  HH:MM:SS       3
-```
-
-#### Step 2: Verify send-community is active
-
-```
-R1# show bgp neighbors 10.1.12.2 | include Community
-Community attribute sent to this neighbor
-
-R1# show bgp neighbors 10.1.13.2 | include Community
-Community attribute sent to this neighbor
-```
-
-#### Step 3: Verify enterprise community tag (65001:100)
+### Task 1 Verification — Community Tags Leaving R1
 
 ```
 R2# show ip bgp 192.168.1.0
-BGP routing table entry for 192.168.1.0/24
-  ...
-  Community: 65001:100
+BGP routing table entry for 192.168.1.0/24, version 8
+Paths: (1 available, best #1, table Default-IP-Routing-Table)
+  Advertised to update-groups:
+     1
+  65001
+    10.1.12.1 from 10.1.12.1 (172.16.1.1)
+      Origin IGP, metric 0, localpref 100, valid, external, best
+      Community: 65001:100                       ! ← community tag must be present
+      Last update: 00:01:22 ago
 ```
 
-#### Step 4: Verify no-export on R4 internal prefixes
+```
+R3# show ip bgp 192.168.1.0
+BGP routing table entry for 192.168.1.0/24, version 6
+Paths: (1 available, best #1, table Default-IP-Routing-Table)
+  65001
+    10.1.13.1 from 10.1.13.1 (172.16.1.1)
+      Origin IGP, metric 0, localpref 100, valid, external, best
+      Community: 65001:200                       ! ← ISP-B receives the 200 tag
+      AS-Path: 65001 65001 65001 65001           ! ← three prepends still present
+      Last update: 00:01:18 ago
+```
+
+### Task 2 Verification — no-export on R5
 
 ```
-R1# show ip bgp 10.4.1.0
-  Community: no-export
+R5# show ip bgp 203.0.115.0
+BGP routing table entry for 203.0.115.0/24, version 4
+Paths: (1 available, best #1, table Default-IP-Routing-Table)
+  65003
+    10.1.35.1 from 10.1.35.1 (172.16.3.3)
+      Origin IGP, metric 0, localpref 100, valid, external, best
+      Community: no-export                       ! ← well-known community present
+      Last update: 00:00:55 ago
+```
 
-R2# show ip bgp 10.4.1.0
-  (Entry must NOT exist — no-export prevents R1 from forwarding to R2)
+```
+R5# show ip bgp neighbors 10.1.35.1 advertised-routes | include 203.0.115
+                                                           ! ← must return empty
+```
+
+### Task 3 Verification — R5 Community Received and Matched on R3
+
+```
+R5# show ip bgp neighbors 10.1.35.1 advertised-routes
+   Network          Next Hop            Metric LocPrf Weight Path
+*> 10.4.1.0/24      0.0.0.0                  0         32768 i
+*> 10.4.2.0/24      0.0.0.0                  0         32768 i   ! ← both prefixes advertised
+*> 172.16.5.5/32    0.0.0.0                  0         32768 i
 
 R3# show ip bgp 10.4.1.0
-  (Entry must NOT exist)
+BGP routing table entry for 10.4.1.0/24, version 9
+Paths: (1 available, best #1, table Default-IP-Routing-Table)
+  65004
+    10.1.35.2 from 10.1.35.2 (172.16.5.5)
+      Origin IGP, metric 0, localpref 180, valid, external, best   ! ← LP 180 applied
+      Community: 65004:100                                          ! ← community received and matched
+      Last update: 00:01:05 ago
 ```
 
-#### Step 5: Verify R5 routes tagged with 65003:500
+### Task 4 Verification — local-AS Community Blocking Re-Advertisement
 
 ```
-R3# show ip bgp 10.5.1.0
-  Community: 65003:500
+R1# show ip bgp 198.51.102.0
+BGP routing table entry for 198.51.102.0/24, version 11
+Paths: (1 available, best #1, table Default-IP-Routing-Table)
+  65002
+    10.1.12.2 from 10.1.12.2 (172.16.2.2)
+      Origin IGP, metric 0, localpref 200, valid, external, best
+      Community: local-AS                        ! ← well-known community present
+      Last update: 00:00:42 ago
 
-R1# show ip bgp 10.5.1.0
-  Local preference: 120
-  Community: 65003:500
-```
-
-#### Step 6: Verify local-preference hierarchy on R1
-
-```
-R1# show ip bgp
-   Network          Next Hop     Metric  LocPrf  Weight  Path
-*> 198.51.100.0/24  10.1.12.2       0      200      0   65002
-*> 203.0.113.0/24   10.1.13.2       0      150      0   65003
-*> 10.5.1.0/24      10.1.13.2       0      120      0   65003 65004
-*> 10.4.1.0/24      172.16.4.4      0      100      0   i
-```
-
-Expected local-preference hierarchy:
-- ISP-A routes (via R2): **200** (highest — preferred)
-- ISP-B direct routes: **150**
-- Customer routes (via R3, from R5): **120** (lower priority)
-- iBGP internal routes (R4): **100** (default)
-
-#### Step 7: Confirm no-export enforcement — ISPs must not see R4 prefixes
-
-```
-R2# show ip bgp | include 10.4
-(no output — R4 prefixes must be invisible to ISP-A)
-
-R3# show ip bgp | include 10.4
-(no output — R4 prefixes must be invisible to ISP-B)
+R3# show ip bgp 198.51.102.0
+% Network not in table                           ! ← local-AS prevents eBGP re-advertisement
 ```
 
 ---
 
 ## 7. Verification Cheatsheet
 
-### Quick Reference Commands
+### BGP Community Configuration
 
-| Goal | Command | Where to Run |
-|---|---|---|
-| BGP session status | `show ip bgp summary` | All routers |
-| See community on a prefix | `show ip bgp <prefix>` | Any router |
-| Check send-community state | `show bgp neighbors <IP> \| include Community` | R1, R2, R3, R4 |
-| Soft-reset inbound policy | `clear ip bgp <IP> soft in` | R1, R3 |
-| Check received routes from peer | `show ip bgp neighbors <IP> received-routes` | R1, R3 |
-| Check advertised routes to peer | `show ip bgp neighbors <IP> advertised-routes` | R1, R3 |
-| Verify community-list | `show ip community-list` | R1 |
-| Verify route-map | `show route-map [name]` | R1, R3, R4 |
-| BGP table with local-pref | `show ip bgp` | R1 |
-| R5 BGP table | `show ip bgp` | R5 |
+```
+ip community-list standard <name> permit <AA:NN | well-known>
 
-### Expected Community Values
+route-map <name> permit <seq>
+ match community <community-list-name>
+ set community <AA:NN | no-export | no-advertise | local-AS>
 
-| Prefix | Community | Applied By | Seen On |
-|---|---|---|---|
-| 192.168.1-3.0/24 | 65001:100 | R1 SET-COMMUNITY-OUT | R2, R3 |
-| 10.4.1-2.0/24 | no-export | R4 SET-NO-EXPORT | R1 only |
-| 10.5.1-2.0/24 | 65003:500 | R3 TAG-CUSTOMER-IN | R1, R3 |
+router bgp <ASN>
+ neighbor <ip> send-community
+```
 
-### Troubleshooting One-Liners
+| Command | Purpose |
+|---------|---------|
+| `ip community-list standard NAME permit AA:NN` | Define a named community match list |
+| `set community AA:NN` | Tag routes with a standard community value |
+| `set community no-export` | Prevent re-advertisement beyond the receiving AS |
+| `set community no-advertise` | Prevent re-advertisement to any BGP peer |
+| `set community local-AS` | Prevent re-advertisement to eBGP peers outside sub-AS |
+| `neighbor X send-community` | Required to carry the COMMUNITY attribute in UPDATEs |
+| `set community AA:NN additive` | Add community to existing tags (does not overwrite) |
+
+> **Exam tip:** `send-community` is per-neighbor and opt-in. Without it, IOS strips the COMMUNITY attribute from every outgoing UPDATE regardless of route-map `set community` statements.
+
+### Community Verification Commands
+
+| Command | What to Look For |
+|---------|-----------------|
+| `show ip bgp <prefix>` | `Community:` line in prefix detail — value and format |
+| `show ip bgp community <AA:NN>` | All prefixes carrying a specific community value |
+| `show ip bgp community no-export` | All prefixes tagged with the no-export well-known community |
+| `show ip bgp neighbors <ip> advertised-routes` | Prefixes actually sent to the neighbor after outbound policy |
+| `show ip bgp neighbors <ip> received-routes` | Raw prefixes received before inbound policy (requires soft-reconfig) |
+| `show ip community-list` | Active community-list definitions and sequence numbers |
+| `show route-map` | Route-map sequences, match/set operations, and hit counters |
+
+### Well-Known Community Quick Reference
+
+| Community | Scope | Effect |
+|-----------|-------|--------|
+| `no-export` | AS boundary | Not advertised to any eBGP peer (stays within the AS or confederation) |
+| `no-advertise` | All peers | Not advertised to any BGP peer (iBGP or eBGP) |
+| `local-AS` | Sub-AS / confederation | Not advertised outside the local sub-AS (eBGP blocked) |
+| `internet` | All peers | Default — no restriction, advertised freely (rarely configured explicitly) |
+
+### Community Format Reference
+
+| Format | Example | Notes |
+|--------|---------|-------|
+| Standard `AA:NN` | `65001:100` | AA = your ASN, NN = value (0–65535 each) |
+| Decimal | `4259905636` | `65001 × 65536 + 100` — legacy display format |
+| `ip bgp-community new-format` | (global command) | Switches display from decimal to `AA:NN` format |
+
+> **Exam tip:** Always configure `ip bgp-community new-format` globally before working with communities — otherwise IOS displays the community as a large decimal number, which is difficult to read and verify.
+
+### Common BGP Community Failure Causes
+
+| Symptom | Likely Cause |
+|---------|-------------|
+| Community not visible on receiving router | `send-community` missing on the sending router's neighbor statement |
+| Community visible but route-map not matching | Community-list name mismatch in the `match community` statement |
+| `no-export` prefix still seen at eBGP peer | Route-map not applied outbound, or `send-community` missing |
+| `local-AS` prefix re-advertised to eBGP | Community set inbound but route-map sequence order wrong (permit before set) |
+| Community set but disappears after iBGP | iBGP peer missing `send-community` — attribute stripped at each hop |
+
+---
+
+## 8. Solutions (Spoiler Alert!)
+
+> Try to complete the lab challenge without looking at these steps first!
+
+### Task 1: Tag Enterprise Prefixes with Standard Communities
+
+<details>
+<summary>Click to view R1 Configuration</summary>
 
 ```bash
-# Communities not seen on R2?
-R1# show bgp neighbors 10.1.12.2 | include Community
-# Must say "Community attribute sent to this neighbor"
-
-# Community-list not matching?
-R1# show ip community-list
-# Verify exact community value matches what's in the BGP table
-
-# R5 session not coming up?
-R5# show ip bgp summary
-R3# debug ip bgp 10.1.35.2 events
-
-# no-export not working?
-R1# show ip bgp 10.4.1.0 | include Community
-# Must show "no-export"
-```
-
----
-
-## 8. Solutions
-
-### Task 1 Solution — Enable send-community on all routers
-
-<details>
-<summary>Solution — Task 1: send-community</summary>
-
-**R1:**
-```
+! Outbound to ISP-A — set community 65001:100 on enterprise prefixes
+route-map TAG-ISP-A-OUT permit 10
+ match ip address prefix-list ENTERPRISE-PREFIXES
+ set community 65001:100
+!
+route-map TAG-ISP-A-OUT permit 20
+!
+! Outbound to ISP-B — set community 65001:200 and prepend (replaces PREPEND-TO-ISP-B)
+route-map TAG-AND-PREPEND-ISP-B permit 10
+ match ip address prefix-list ENTERPRISE-PREFIXES
+ set community 65001:200
+ set as-path prepend 65001 65001 65001
+!
+route-map TAG-AND-PREPEND-ISP-B permit 20
+!
 router bgp 65001
  neighbor 10.1.12.2 send-community
+ neighbor 10.1.12.2 route-map TAG-ISP-A-OUT out
  neighbor 10.1.13.2 send-community
- neighbor 172.16.4.4 send-community
+ no neighbor 10.1.13.2 route-map PREPEND-TO-ISP-B out
+ neighbor 10.1.13.2 route-map TAG-AND-PREPEND-ISP-B out
 ```
-
-**R2:**
-```
-router bgp 65002
- neighbor 10.1.12.1 send-community
- neighbor 10.1.23.2 send-community
-```
-
-**R3:**
-```
-router bgp 65003
- neighbor 10.1.13.1 send-community
- neighbor 10.1.23.1 send-community
- neighbor 10.1.35.2 send-community
-```
-
-**R4:**
-```
-router bgp 65001
- neighbor 172.16.1.1 send-community
-```
-
-**R5:**
-```
-router bgp 65004
- neighbor 10.1.35.1 send-community
-```
-
-**Verify:**
-```
-R1# show bgp neighbors 10.1.12.2 | include Community
-Community attribute sent to this neighbor
-```
-
 </details>
 
----
-
-### Task 2 Solution — Tag Enterprise Prefixes with 65001:100
-
 <details>
-<summary>Solution — Task 2: SET-COMMUNITY-OUT on R1</summary>
+<summary>Click to view Verification Commands</summary>
 
-```
-ip prefix-list ENTERPRISE-PREFIXES seq 10 permit 192.168.0.0/16 ge 24 le 24
-
-route-map SET-COMMUNITY-OUT permit 10
- match ip address prefix-list ENTERPRISE-PREFIXES
- set community 65001:100 additive
-!
-route-map SET-COMMUNITY-OUT permit 20
-!
-router bgp 65001
- neighbor 10.1.12.2 route-map SET-COMMUNITY-OUT out
- neighbor 10.1.13.2 route-map SET-COMMUNITY-OUT out
-```
-
-After applying, soft-reset outbound:
-```
-R1# clear ip bgp 10.1.12.2 soft out
-R1# clear ip bgp 10.1.13.2 soft out
-```
-
-**Verify on R2:**
-```
+```bash
 R2# show ip bgp 192.168.1.0
-  Community: 65001:100
+R3# show ip bgp 192.168.1.0
+R1# show route-map TAG-ISP-A-OUT
+R1# show route-map TAG-AND-PREPEND-ISP-B
 ```
-
-Note: R1 still applies PREPEND-TO-ISP-B outbound to R3. You can chain both route-maps using `continue` or apply SET-COMMUNITY-OUT to R2 only and fold the community-setting into PREPEND-TO-ISP-B for R3. The solution config shown uses separate SET-COMMUNITY-OUT applied to both neighbors.
-
 </details>
 
 ---
 
-### Task 3 Solution — no-export on R4 Internal Prefixes
+### Task 2: Apply no-export on R3 for ISP-B Internal Prefix
 
 <details>
-<summary>Solution — Task 3: SET-NO-EXPORT on R4</summary>
+<summary>Click to view R3 Configuration</summary>
 
-```
-ip access-list standard ENTERPRISE-INTERNAL
- permit 10.4.1.0 0.0.0.255
- permit 10.4.2.0 0.0.0.255
-
-route-map SET-NO-EXPORT permit 10
- match ip address ENTERPRISE-INTERNAL
- set community no-export additive
+```bash
+ip prefix-list ISP-B-INTERNAL seq 10 permit 203.0.115.0/24
 !
-route-map SET-NO-EXPORT permit 20
+route-map POLICY-TO-R5 permit 10
+ match ip address prefix-list ISP-B-INTERNAL
+ set community no-export
 !
-router bgp 65001
- neighbor 172.16.1.1 send-community
- no neighbor 172.16.1.1 distribute-list ENTERPRISE-INTERNAL out
- neighbor 172.16.1.1 route-map SET-NO-EXPORT out
-```
-
-Soft-reset:
-```
-R4# clear ip bgp 172.16.1.1 soft out
-```
-
-**Verify on R1:**
-```
-R1# show ip bgp 10.4.1.0
-  Community: no-export
-```
-
-**Verify no-export enforcement — R2 and R3 must NOT have these:**
-```
-R2# show ip bgp 10.4.1.0
-(no entry)
-R3# show ip bgp 10.4.1.0
-(no entry)
-```
-
-</details>
-
----
-
-### Task 4 Solution — R5 eBGP and Customer Tagging on R3
-
-<details>
-<summary>Solution — Task 4: R3 and R5 configuration</summary>
-
-**R3:**
-```
-route-map TAG-CUSTOMER-IN permit 10
- set community 65003:500 additive
+route-map POLICY-TO-R5 permit 20
 !
 router bgp 65003
  neighbor 10.1.35.2 remote-as 65004
  neighbor 10.1.35.2 send-community
- neighbor 10.1.35.2 soft-reconfiguration inbound
- neighbor 10.1.35.2 route-map TAG-CUSTOMER-IN in
+ neighbor 10.1.35.2 route-map POLICY-TO-R5 out
 ```
+</details>
 
-**R5:**
-```
-router bgp 65004
- bgp router-id 172.16.5.5
- neighbor 10.1.35.1 remote-as 65003
- neighbor 10.1.35.1 send-community
- network 172.16.5.5 mask 255.255.255.255
- network 10.5.1.0 mask 255.255.255.0
- network 10.5.2.0 mask 255.255.255.0
-```
+<details>
+<summary>Click to view Verification Commands</summary>
 
-**Verify session:**
+```bash
+R5# show ip bgp 203.0.115.0
+R5# show ip bgp neighbors 10.1.35.1 advertised-routes
+R3# show route-map POLICY-TO-R5
 ```
-R3# show ip bgp summary
-10.1.35.2       4 65004 ...  3
-```
-
-**Verify community tag:**
-```
-R3# show ip bgp 10.5.1.0
-  Community: 65003:500
-```
-
 </details>
 
 ---
 
-### Task 5 Solution — Community-Based Local-Preference on R1
+### Task 3: Community-Based Inbound Policy on R3 from R5
 
 <details>
-<summary>Solution — Task 5: POLICY-ISP-B-IN with community match</summary>
+<summary>Click to view R5 Configuration</summary>
 
-```
-ip community-list standard CUSTOMER-ROUTES permit 65003:500
-
-route-map POLICY-ISP-B-IN deny 5
- match ip address prefix-list DENY-203-115
+```bash
+ip prefix-list R5-CUSTOMER-ROUTES seq 10 permit 10.4.1.0/24
+ip prefix-list R5-CUSTOMER-ROUTES seq 20 permit 10.4.2.0/24
 !
-route-map POLICY-ISP-B-IN permit 8
- match community CUSTOMER-ROUTES
- set local-preference 120
+route-map SET-COMM-OUT permit 10
+ match ip address prefix-list R5-CUSTOMER-ROUTES
+ set community 65004:100
 !
-route-map POLICY-ISP-B-IN permit 10
- match as-path 2
- set local-preference 150
+route-map SET-COMM-OUT permit 20
 !
-route-map POLICY-ISP-B-IN permit 20
+router bgp 65004
+ bgp router-id 172.16.5.5
+ neighbor 10.1.35.1 remote-as 65003
+ neighbor 10.1.35.1 soft-reconfiguration inbound
+ neighbor 10.1.35.1 send-community
+ neighbor 10.1.35.1 route-map SET-COMM-OUT out
+ !
+ network 172.16.5.5 mask 255.255.255.255
+ network 10.4.1.0 mask 255.255.255.0
+ network 10.4.2.0 mask 255.255.255.0
 ```
+</details>
 
-Soft-reset inbound from R3:
-```
-R1# clear ip bgp 10.1.13.2 soft in
-```
+<details>
+<summary>Click to view R3 Configuration</summary>
 
-**Verify:**
+```bash
+ip community-list standard R5-PREFERRED permit 65004:100
+!
+route-map POLICY-FROM-R5 permit 10
+ match community R5-PREFERRED
+ set local-preference 180
+!
+route-map POLICY-FROM-R5 permit 20
+!
+router bgp 65003
+ neighbor 10.1.35.2 soft-reconfiguration inbound
+ neighbor 10.1.35.2 route-map POLICY-FROM-R5 in
 ```
-R1# show ip bgp 10.5.1.0
-  Local preference: 120
+</details>
 
-R1# show ip bgp 203.0.113.0
-  Local preference: 150
+<details>
+<summary>Click to view Verification Commands</summary>
 
-R1# show ip bgp 198.51.100.0
-  Local preference: 200
+```bash
+R5# show ip bgp neighbors 10.1.35.1 advertised-routes
+R3# show ip bgp 10.4.1.0
+R3# show ip bgp 10.4.2.0
+R3# show ip community-list
 ```
+</details>
 
-**Verify community-list:**
-```
-R1# show ip community-list
-Community standard list CUSTOMER-ROUTES
-    permit 65003:500
-```
+---
 
+### Task 4: Tag ISP-A Internal Prefix with local-AS Community
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
+```bash
+ip prefix-list ISP-A-INTERNAL seq 10 permit 198.51.102.0/24
+!
+! Rebuild SET-LP-200-ISP-A with new sequence at top
+no route-map SET-LP-200-ISP-A
+route-map SET-LP-200-ISP-A permit 10
+ match ip address prefix-list ISP-A-INTERNAL
+ set local-preference 200
+ set community local-AS
+!
+route-map SET-LP-200-ISP-A permit 15
+ match as-path 1
+ set local-preference 200
+!
+route-map SET-LP-200-ISP-A permit 20
+!
+! Soft reset to apply without dropping session
+clear ip bgp 10.1.12.2 soft in
+```
+</details>
+
+<details>
+<summary>Click to view Verification Commands</summary>
+
+```bash
+R1# show ip bgp 198.51.102.0
+R3# show ip bgp 198.51.102.0
+R4# show ip bgp 198.51.102.0
+R1# show route-map SET-LP-200-ISP-A
+```
 </details>
 
 ---
 
 ## 9. Troubleshooting Scenarios
 
-### Ticket 1 — Communities Not Propagating to ISP-A
+Each ticket simulates a real-world fault. Inject the fault first, then
+diagnose and fix using only show commands.
 
-**Problem Statement:**
+### Workflow
 
-The network operations team reports that R2 (ISP-A) is not seeing the `65001:100` community on the enterprise prefixes (192.168.1-3.0/24) even though R1 has a route-map applying the community tag. You have been asked to diagnose and fix the issue.
-
-**Your Mission:**
-
-Find out why communities are not reaching R2 and restore correct behavior.
-
-**Symptoms:**
-```
-R2# show ip bgp 192.168.1.0
-BGP routing table entry for 192.168.1.0/24
-  Best path: ...
-  (no Community attribute shown)
+```bash
+python3 setup_lab.py                                   # reset to known-good
+python3 scripts/fault-injection/inject_scenario_01.py  # Ticket 1
+python3 scripts/fault-injection/inject_scenario_02.py  # Ticket 2
+python3 scripts/fault-injection/inject_scenario_03.py  # Ticket 3
+python3 scripts/fault-injection/apply_solution.py      # restore
 ```
 
-**Success Criteria:**
-- `show ip bgp 192.168.1.0` on R2 shows `Community: 65001:100`
-- `show bgp neighbors 10.1.12.2 | include Community` on R1 shows "Community attribute sent to this neighbor"
+---
+
+### Ticket 1 — R5's Routes Arrive at R3 but Local Preference is 100, Not 180
+
+The operations team expects R3 to prefer R5's customer routes with a local-preference of 180 based on the community signal agreed upon with DataStream. After a recent config change, R3 is showing LocPrf 100 for those routes instead.
+
+**Inject:** `python3 scripts/fault-injection/inject_scenario_01.py`
+
+**Success criteria:** `show ip bgp 10.4.1.0` on R3 shows `localpref 180` and `Community: 65004:100`.
 
 <details>
-<summary>Ticket 1 Solution</summary>
+<summary>Click to view Diagnosis Steps</summary>
 
-**Root Cause:**
+1. Check R3's BGP table for R5's routes: `R3# show ip bgp 10.4.1.0`
+   - Confirm the Community attribute is present: `Community: 65004:100`
+   - Note the local-preference value — it should be 180 but is 100
 
-The `send-community` statement is missing from R1's neighbor configuration for 10.1.12.2 (R2). BGP does not send community attributes to any neighbor by default — it must be explicitly enabled with `send-community`.
+2. Check whether the inbound route-map is applied to the R5 neighbor:
+   `R3# show bgp neighbors 10.1.35.2 | include route-map`
+   - If no inbound route-map is listed, the policy is missing or detached
 
-**Diagnosis:**
+3. Check whether the community-list still exists:
+   `R3# show ip community-list`
+   - If the list is absent or has a different name, the `match community` in the route-map will not match any routes
+
+4. Verify the route-map definition:
+   `R3# show route-map POLICY-FROM-R5`
+   - Check that sequence 10 matches `R5-PREFERRED` and sets `local-preference 180`
+
+5. Root cause: The community-list `R5-PREFERRED` has been removed or renamed, causing the `match community` clause to match nothing — routes fall through to sequence 20 (permit without action), so local-pref remains at the BGP default of 100.
+</details>
+
+<details>
+<summary>Click to view Fix</summary>
+
+```bash
+R3(config)# ip community-list standard R5-PREFERRED permit 65004:100
+R3# clear ip bgp 10.1.35.2 soft in
 ```
-R1# show bgp neighbors 10.1.12.2 | include Community
-(no output — or shows "Community attribute not sent")
-```
 
-**Fix:**
-```
+Verify: `R3# show ip bgp 10.4.1.0` — local-pref must return to 180.
+</details>
+
+---
+
+### Ticket 2 — R2 Is Receiving Enterprise Prefixes Without a Community Tag
+
+The ISP-A operations team reports that Acme's prefixes (192.168.x.x) are arriving at R2 without the expected `65001:100` community tag. Their policy automation engine relies on this tag to apply QoS and route-preference logic.
+
+**Inject:** `python3 scripts/fault-injection/inject_scenario_02.py`
+
+**Success criteria:** `show ip bgp 192.168.1.0` on R2 shows `Community: 65001:100`.
+
+<details>
+<summary>Click to view Diagnosis Steps</summary>
+
+1. On R2, examine the community attribute on received prefixes:
+   `R2# show ip bgp 192.168.1.0`
+   - If the `Community:` line is absent or shows no value, the tag is not arriving
+
+2. On R1, check whether the outbound route-map is applied to R2's neighbor:
+   `R1# show bgp neighbors 10.1.12.2 | include route-map`
+   - The outbound route-map `TAG-ISP-A-OUT` should appear — if missing, the map was removed
+
+3. Verify the route-map still exists:
+   `R1# show route-map TAG-ISP-A-OUT`
+
+4. Check send-community status on the R2 neighbor:
+   `R1# show bgp neighbors 10.1.12.2 | include community`
+   - `Community attribute sent to this neighbor` must appear — if absent, `send-community` is missing
+
+5. Root cause: The outbound route-map `TAG-ISP-A-OUT` has been detached from the R2 neighbor statement on R1.
+</details>
+
+<details>
+<summary>Click to view Fix</summary>
+
+```bash
 R1(config)# router bgp 65001
-R1(config-router)# neighbor 10.1.12.2 send-community
-R1(config-router)# end
+R1(config-router)# neighbor 10.1.12.2 route-map TAG-ISP-A-OUT out
 R1# clear ip bgp 10.1.12.2 soft out
 ```
 
-**Verify:**
-```
-R1# show bgp neighbors 10.1.12.2 | include Community
-Community attribute sent to this neighbor
-
-R2# show ip bgp 192.168.1.0
-  Community: 65001:100
-```
-
-**Key Lesson:**
-
-`send-community` is required on EACH neighbor that should receive communities. It is not inherited or global. If you configure it on one neighbor but not another, communities are silently dropped for the neighbor without the configuration.
-
+Verify: `R2# show ip bgp 192.168.1.0` — `Community: 65001:100` must appear.
 </details>
 
 ---
 
-### Ticket 2 — Community-List Not Matching: Customer Routes Get Wrong Local-Preference
+### Ticket 3 — DataStream Reports Receiving an ISP-B Internal Prefix Marked Confidential
 
-**Problem Statement:**
+DataStream (R5) is receiving the 203.0.115.0/24 prefix from ISP-B without any community tag. The service contract requires ISP-B to tag this prefix with `no-export` so DataStream cannot re-advertise it beyond AS 65004. DataStream is now leaking the prefix to an upstream peer.
 
-R1 should set local-preference 120 for routes tagged with community `65003:500` (R5 customer routes). Instead, these routes are getting local-preference 150 (the ISP-B default). Policy is leaking customer routes into the higher-priority ISP-B bucket.
+**Inject:** `python3 scripts/fault-injection/inject_scenario_03.py`
 
-**Your Mission:**
-
-Identify why the community-list match is failing and fix it so customer routes correctly receive local-preference 120.
-
-**Symptoms:**
-```
-R1# show ip bgp 10.5.1.0
-  Local preference: 150
-  Community: 65003:500
-```
-
-The community IS on the route, but the community-list match is not working.
-
-**Success Criteria:**
-- `show ip bgp 10.5.1.0` on R1 shows `Local preference: 120`
-- `show ip bgp 203.0.113.0` on R1 still shows `Local preference: 150`
-- `show ip community-list` on R1 shows the correct community value
+**Success criteria:** `show ip bgp 203.0.115.0` on R5 shows `Community: no-export`.
 
 <details>
-<summary>Ticket 2 Solution</summary>
+<summary>Click to view Diagnosis Steps</summary>
 
-**Root Cause:**
+1. On R5, check the community attribute on the 203.0.115.0/24 prefix:
+   `R5# show ip bgp 203.0.115.0`
+   - The `Community:` line should show `no-export` — if absent, the tag is not arriving
 
-The community-list is configured with the wrong community number, so it never matches the routes tagged `65003:500`. The misconfiguration looks like:
+2. On R3, verify the outbound route-map to R5 is applied:
+   `R3# show bgp neighbors 10.1.35.2 | include route-map`
+   - `POLICY-TO-R5` should appear in the outbound direction
 
-```
-ip community-list standard CUSTOMER-ROUTES permit 65003:999
-```
+3. Verify the route-map definition:
+   `R3# show route-map POLICY-TO-R5`
+   - Sequence 10 should match `ISP-B-INTERNAL` and set `community no-export`
 
-This will never match routes tagged with `65003:500`.
+4. Check send-community on R3's R5 neighbor:
+   `R3# show bgp neighbors 10.1.35.2 | include community`
+   - If `send-community` is absent, the community attribute is stripped before the UPDATE leaves R3
 
-**Diagnosis:**
-```
-R1# show ip community-list
-Community standard list CUSTOMER-ROUTES
-    permit 65003:999
-
-R1# show ip bgp 10.5.1.0
-  Community: 65003:500
-  Local preference: 150
-```
-
-The community value in the list (65003:999) does not match the value on the route (65003:500), so sequence 8 of POLICY-ISP-B-IN never fires. The route falls through to sequence 10 and gets LP 150.
-
-**Fix:**
-```
-R1(config)# no ip community-list standard CUSTOMER-ROUTES
-R1(config)# ip community-list standard CUSTOMER-ROUTES permit 65003:500
-R1(config)# end
-R1# clear ip bgp 10.1.13.2 soft in
-```
-
-**Verify:**
-```
-R1# show ip community-list
-Community standard list CUSTOMER-ROUTES
-    permit 65003:500
-
-R1# show ip bgp 10.5.1.0
-  Local preference: 120
-```
-
-**Key Lesson:**
-
-Community values must match exactly — both the AS portion and the value portion. When debugging, always compare `show ip community-list` against `show ip bgp <prefix>` to confirm the values align character-for-character.
-
+5. Root cause: The outbound route-map `POLICY-TO-R5` has been detached from R3's R5 neighbor statement, so 203.0.115.0/24 is advertised without the `no-export` tag.
 </details>
 
----
-
-### Ticket 3 — R5 BGP Session Up But No Routes Advertised
-
-**Problem Statement:**
-
-The BGP session between R3 and R5 is showing as Established (`show ip bgp summary` on R3 shows R5 in Up/Down state with a timestamp). However, R3 is receiving 0 prefixes from R5, and the customer subnets (10.5.1.0/24, 10.5.2.0/24) are completely absent from R3's BGP table.
-
-**Your Mission:**
-
-Determine why R5 is not advertising any prefixes and fix the configuration so that all three R5 prefixes appear in R3's BGP table with community 65003:500.
-
-**Symptoms:**
-```
-R3# show ip bgp summary
-Neighbor        V    AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd
-10.1.35.2       4 65004      12      10        5    0    0  00:01:43        0
-
-R5# show ip bgp
-(empty or no entries)
-```
-
-**Success Criteria:**
-- `show ip bgp summary` on R3 shows R5 with PfxRcd = 3
-- `show ip bgp 10.5.1.0` on R3 shows `Community: 65003:500`
-- `show ip bgp 10.5.2.0` on R3 shows `Community: 65003:500`
-
 <details>
-<summary>Ticket 3 Solution</summary>
+<summary>Click to view Fix</summary>
 
-**Root Cause:**
-
-R5's BGP configuration is missing the `network` statements. The BGP session comes up (TCP + BGP OPEN succeed) but R5 has nothing to advertise because no prefixes have been injected into the BGP table via `network` commands.
-
-**Diagnosis:**
-```
-R5# show ip bgp
-(no entries)
-
-R5# show running-config | section router bgp
-router bgp 65004
- bgp router-id 172.16.5.5
- neighbor 10.1.35.1 remote-as 65003
- neighbor 10.1.35.1 send-community
- (no network statements)
+```bash
+R3(config)# router bgp 65003
+R3(config-router)# neighbor 10.1.35.2 route-map POLICY-TO-R5 out
+R3# clear ip bgp 10.1.35.2 soft out
 ```
 
-**Fix:**
-```
-R5(config)# router bgp 65004
-R5(config-router)# network 172.16.5.5 mask 255.255.255.255
-R5(config-router)# network 10.5.1.0 mask 255.255.255.0
-R5(config-router)# network 10.5.2.0 mask 255.255.255.0
-R5(config-router)# end
-```
-
-Note: The loopback and LAN subnets must exist in R5's routing table for the `network` command to inject them into BGP. Since they are configured as Loopback interfaces, they are always in the routing table.
-
-**Verify:**
-```
-R5# show ip bgp
-   Network          Next Hop     Metric  LocPrf  Weight Path
-*> 10.5.1.0/24      0.0.0.0           0         32768 i
-*> 10.5.2.0/24      0.0.0.0           0         32768 i
-*> 172.16.5.5/32    0.0.0.0           0         32768 i
-
-R3# show ip bgp summary
-10.1.35.2       4 65004 ...  3
-
-R3# show ip bgp 10.5.1.0
-  Community: 65003:500
-```
-
-**Key Lesson:**
-
-A BGP session being Established (PfxRcvd = 0, but neighbor is Up) does NOT mean routes are being advertised. The session is a TCP connection — routes are a separate concern. Always check `show ip bgp` on the advertising router and verify that `network` statements are present AND the prefixes exist in the routing table.
-
+Verify: `R5# show ip bgp 203.0.115.0` — `Community: no-export` must appear.
 </details>
 
 ---
 
 ## 10. Lab Completion Checklist
 
-Use this checklist to confirm all lab objectives have been met before considering the lab complete.
+### Core Implementation
 
-### BGP Sessions
+- [ ] R2 receives 192.168.x.x prefixes from R1 with community `65001:100`
+- [ ] R3 receives 192.168.x.x prefixes from R1 with community `65001:200` and AS-path prepend
+- [ ] R3 advertises 203.0.115.0/24 to R5 with `no-export` community
+- [ ] R5 has a BGP session with R3 in Established state
+- [ ] R5 advertises 10.4.1.0/24 and 10.4.2.0/24 with community `65004:100`
+- [ ] R3 shows local-preference 180 for R5's customer prefixes
+- [ ] R1 shows 198.51.102.0/24 with `local-AS` community and local-preference 200
+- [ ] 198.51.102.0/24 does not appear in R3's or R5's BGP table
 
-- [ ] R1 — R2 (AS65001 — AS65002) session is Established
-- [ ] R1 — R3 (AS65001 — AS65003) session is Established
-- [ ] R1 — R4 (iBGP, AS65001) session is Established
-- [ ] R2 — R3 (AS65002 — AS65003) session is Established
-- [ ] R3 — R5 (AS65003 — AS65004) session is Established
+### Troubleshooting
 
-### send-community
-
-- [ ] R1 has `send-community` on all 3 neighbors (10.1.12.2, 10.1.13.2, 172.16.4.4)
-- [ ] R2 has `send-community` on both neighbors
-- [ ] R3 has `send-community` on all 3 neighbors (including R5)
-- [ ] R4 has `send-community` on R1 iBGP neighbor
-- [ ] R5 has `send-community` on R3 neighbor
-
-### Task 2 — Enterprise Community Tag
-
-- [ ] R1 route-map SET-COMMUNITY-OUT exists
-- [ ] 192.168.1.0/24 carries community 65001:100 at R2
-- [ ] 192.168.2.0/24 carries community 65001:100 at R2
-- [ ] 192.168.3.0/24 carries community 65001:100 at R2
-
-### Task 3 — no-export on R4 Prefixes
-
-- [ ] R4 route-map SET-NO-EXPORT exists
-- [ ] R4 uses route-map (not distribute-list) outbound to R1
-- [ ] R1 sees 10.4.1.0/24 with community no-export
-- [ ] R2 does NOT have 10.4.1.0/24 in its BGP table
-- [ ] R3 does NOT have 10.4.1.0/24 in its BGP table
-
-### Task 4 — R5 Customer Routes
-
-- [ ] R3 — R5 eBGP session is Established with PfxRcd = 3
-- [ ] R3 route-map TAG-CUSTOMER-IN exists and is applied inbound from R5
-- [ ] 10.5.1.0/24 carries community 65003:500 on R3
-- [ ] 10.5.2.0/24 carries community 65003:500 on R3
-
-### Task 5 — Community-Based Local-Preference on R1
-
-- [ ] `ip community-list standard CUSTOMER-ROUTES permit 65003:500` exists on R1
-- [ ] POLICY-ISP-B-IN has sequence 8 matching CUSTOMER-ROUTES
-- [ ] R1 shows local-preference 120 for 10.5.1.0/24
-- [ ] R1 shows local-preference 150 for 203.0.113.0/24 (ISP-B direct)
-- [ ] R1 shows local-preference 200 for 198.51.100.0/24 (ISP-A)
-
-### Policy Hierarchy Verification
-
-Run on R1 and confirm the three-tier local-preference is intact:
-
-```
-R1# show ip bgp
-```
-
-Expected:
-| Prefix Source | Local Pref | Policy |
-|---|---|---|
-| ISP-A (R2 routes) | 200 | SET-LP-200-ISP-A |
-| ISP-B direct routes | 150 | POLICY-ISP-B-IN seq 10 |
-| Customer routes (R5 via R3) | 120 | POLICY-ISP-B-IN seq 8 |
-| iBGP internal (R4) | 100 | default |
+- [ ] Ticket 1 resolved: R3 correctly applies local-preference 180 to R5's tagged routes
+- [ ] Ticket 2 resolved: R2 receives enterprise prefixes with `65001:100` community
+- [ ] Ticket 3 resolved: R5 receives 203.0.115.0/24 with `no-export` community

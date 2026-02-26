@@ -1,7 +1,3 @@
-"""
-BGP Lab 06 - Communities & Policy Control
-Setup script: pushes initial-configs to all 5 routers via Netmiko telnet.
-"""
 import sys
 import os
 

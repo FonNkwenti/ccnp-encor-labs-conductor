@@ -1,39 +1,30 @@
 """
 BGP Lab 06 — Fault Injection: Scenario 03
-Ticket: R5 BGP session Established but no routes advertised
-Fault:  Removes all network statements from R5's BGP config so it has nothing
-        to advertise. The TCP/BGP session with R3 remains up (PfxRcvd stays 0).
-Target: R5 (port 5005)
+Ticket: DataStream reports receiving an ISP-B internal prefix marked confidential
+Fault:  Remove the outbound route-map POLICY-TO-R5 from R3's R5 neighbor
+        statement — 203.0.115.0/24 reaches R5 without the no-export community
+Target: R3 (port 5003)
 """
 from netmiko import ConnectHandler
 
 device = {
     "device_type": "cisco_ios_telnet",
     "host": "127.0.0.1",
-    "port": 5005,
+    "port": 5003,
     "username": "",
     "password": "",
     "secret": "",
 }
 
 fault_commands = [
-    "router bgp 65004",
-    " no network 172.16.5.5 mask 255.255.255.255",
-    " no network 10.5.1.0 mask 255.255.255.0",
-    " no network 10.5.2.0 mask 255.255.255.0",
-    "end",
+    "router bgp 65003",
+    " no neighbor 10.1.35.2 route-map POLICY-TO-R5 out",
 ]
 
-print("Injecting Scenario 03: removing network statements from R5 BGP config...")
+print("Injecting Scenario 03: removing POLICY-TO-R5 outbound policy on R3 toward R5...")
 with ConnectHandler(**device) as conn:
     conn.enable()
     conn.send_config_set(fault_commands)
+    conn.send_command("clear ip bgp 10.1.35.2 soft out")
 print("Fault injected.")
-print()
-print("Verify the fault:")
-print("  R5# show ip bgp")
-print("  (should be empty — no prefixes in BGP table)")
-print("  R3# show ip bgp summary")
-print("  (R5 neighbor should show PfxRcvd = 0, but session still Up)")
-print("  R3# show ip bgp 10.5.1.0")
-print("  (no entry)")
+print("Verify: 'show ip bgp 203.0.115.0' on R5 — Community line should be absent.")
