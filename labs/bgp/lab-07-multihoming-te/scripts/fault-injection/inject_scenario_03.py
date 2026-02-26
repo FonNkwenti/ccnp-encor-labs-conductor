@@ -1,39 +1,26 @@
 """
-BGP Lab 07 — Fault Injection Scenario 03
-Fault: AS-path prepend entry moved after catch-all in TE-TO-ISP-B.
-Removes seq 10 (which prepends 3x AS-path for 192.168.1.0/24 to ISP-B)
-and re-adds it as seq 50 — after the catch-all at seq 40. The catch-all
-permits everything first, so the prepend statement never fires.
-ISP-B will no longer see the longer AS-path for 192.168.1.0/24 and may
-prefer that path incorrectly, causing suboptimal inbound routing.
+Fault Injection — BGP Lab 07, Ticket 3
+Changes the Local Preference set in ISP-A-IN route-map from 200 to 50 for ISP-A prefixes.
+R1 now assigns LP=50 to ISP-A-origin prefixes, making them LESS preferred than the
+LP=100 default applied to ISP-B paths. All traffic exits via ISP-B regardless of destination.
 """
-from netmiko import ConnectHandler
+import sys
+import os
 
-device = {
-    "device_type": "cisco_ios_telnet",
-    "host": "127.0.0.1",
-    "port": 5001,
-    "username": "",
-    "password": "",
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../common/tools')))
+from lab_utils import inject_fault
+
+FAULT_COMMANDS = {
+    "R1": [
+        # Change LP from 200 to 50 for ISP-A prefixes in ISP-A-IN
+        "route-map ISP-A-IN permit 10",
+        "set local-preference 50",
+        "exit",
+        "clear ip bgp 10.1.12.2 soft in",
+    ]
 }
 
-commands = [
-    "no route-map TE-TO-ISP-B permit 10",
-    "route-map TE-TO-ISP-B permit 50",
-    " match ip address prefix-list PREFIX-192-168-1",
-    " set as-path prepend 65001 65001 65001",
-    " set metric 100",
-]
-
-print("Injecting Scenario 03: Moving AS-path prepend entry after catch-all in TE-TO-ISP-B...")
-with ConnectHandler(**device) as net_connect:
-    output = net_connect.send_config_set(commands)
-    print(output)
-print("Fault injected.")
-print()
-print("Expected symptom: 192.168.1.0/24 is advertised to ISP-B without AS-path prepend.")
-print("                  ISP-B sees a shorter AS-path and may prefer this path incorrectly.")
-print("Verify with:")
-print("  R3# show ip bgp 192.168.1.0     (expect normal AS-path 65001, no prepend)")
-print("  R1# show route-map TE-TO-ISP-B  (seq 10 missing, seq 50 after catch-all)")
-print("  R1# show ip bgp neighbors 10.1.13.2 advertised-routes")
+if __name__ == "__main__":
+    inject_fault(FAULT_COMMANDS, host="127.0.0.1", port_map={"R1": 5001})
+    print("Scenario 03 injected: ISP-A-IN sets LP=50 (inverted — lower than default LP=100).")
+    print("Symptom: all outbound traffic exits via ISP-B regardless of destination prefix.")

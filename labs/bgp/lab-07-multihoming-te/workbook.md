@@ -1,788 +1,517 @@
-# BGP Lab 07 — Multihoming & Traffic Engineering
+# BGP Lab 07: Multihoming & Traffic Engineering
 
-**Chapter:** BGP | **Lab Number:** 07 | **Difficulty:** Advanced | **Estimated Time:** 90 minutes
+## Table of Contents
+
+1. [Concepts & Skills Covered](#1-concepts--skills-covered)
+2. [Topology & Scenario](#2-topology--scenario)
+3. [Hardware & Environment Specifications](#3-hardware--environment-specifications)
+4. [Base Configuration](#4-base-configuration)
+5. [Lab Challenge: Core Implementation](#5-lab-challenge-core-implementation)
+6. [Verification & Analysis](#6-verification--analysis)
+7. [Verification Cheatsheet](#7-verification-cheatsheet)
+8. [Solutions (Spoiler Alert!)](#8-solutions-spoiler-alert)
+9. [Troubleshooting Scenarios](#9-troubleshooting-scenarios)
+10. [Lab Completion Checklist](#10-lab-completion-checklist)
 
 ---
 
 ## 1. Concepts & Skills Covered
 
-This lab builds on the community and policy infrastructure established in Lab 06 and focuses on practical dual-ISP traffic engineering. You will implement outbound and inbound traffic control using the full set of BGP policy tools available in IOS, and learn how the tools interact and complement one another.
+### CCNP ENCOR Exam Blueprint (350-401)
 
-### Core Topics
+| Exam Topic | Description |
+|------------|-------------|
+| **3.2.c** | Configure and verify eBGP between directly connected neighbors — best path selection algorithm and neighbor relationships |
+| **3.2.d** | Describe policy-based routing |
+| **1.1.b** | High availability techniques such as redundancy, FHRP, and SSO |
 
-| Topic | Description |
-|---|---|
-| BGP Multihoming | Connecting a single AS to two or more upstream ISPs for redundancy and load distribution |
-| Outbound Traffic Engineering | Using Local Preference to control which ISP the enterprise uses for each traffic class |
-| Inbound Traffic Engineering | Using AS-path prepending and MED to influence how the internet reaches the enterprise |
-| Local Preference (LP) | An iBGP attribute (not sent to eBGP peers) that sets preference for outbound exit paths |
-| Per-destination LP policy | Applying different LP values based on prefix-list matching rather than a single flat policy |
-| AS-Path Prepending | Artificially lengthening the AS-path to make a path less attractive to remote ASes |
-| MED (Multi-Exit Discriminator) | A soft metric sent to directly connected eBGP peers as a hint for inbound path preference |
-| MED vs. Prepending | Understanding when MED works and when prepending is required for multi-hop influence |
-| Conditional Default Origination | Advertising a default route to internal peers only when an upstream prefix is reachable |
-| `default-originate route-map` | IOS mechanism for conditional default route advertisement based on BGP table state |
-| Dual-homed design principles | Designing policy so each prefix has a primary and a backup ISP path |
+### Skills Developed
 
-### CCNP ENCOR Exam Relevance
-
-Traffic engineering in a dual-homed design is a core 350-401 topic. Expect exam questions on:
-- Which BGP attributes control outbound vs inbound traffic
-- Why Local Preference does not propagate to eBGP peers
-- Why MED is only compared between routes from the same AS by default
-- How AS-path prepending is the only portable inbound TE tool that works across multiple hops
-- The exact syntax and behavior of `default-originate route-map`
+- **Dual-Homed eBGP Design** — dual ISP attachment for high availability, failover verification
+- **Outbound Traffic Engineering** — per-prefix Local Preference to control egress ISP selection
+- **Inbound Traffic Engineering** — AS-Path prepending to influence which ISP internet hosts use to reach enterprise prefixes
+- **MED (Multi-Exit Discriminator)** — signaling preferred entry points to external ISPs
+- **Conditional Default Route Origination** — generating a default route for internal peers only when upstream reachability is confirmed
+- **BGP Policy Interaction** — understanding how route-maps, prefix-lists, and attribute manipulation combine to implement traffic engineering
 
 ---
 
 ## 2. Topology & Scenario
 
-### Scenario
+### Business Context
 
-You are the network engineer for an enterprise (AS 65001). Your edge router R1 has dual connections — one to ISP-A (R2, AS 65002) and one to ISP-B (R3, AS 65003). The enterprise advertises three /24 prefixes to both ISPs. R4 is an internal router that depends on R1 for internet access via a default route. R5 (AS 65004) is a downstream customer connected to ISP-B.
+AcmeCorp (AS 65001) runs a dual-homed enterprise WAN connecting to two ISPs:
+- **ISP-A (AS 65002)** — primary upstream, preferred for general outbound traffic
+- **ISP-B (AS 65003)** — secondary upstream, used for specific destination prefixes and as failover
 
-Management requires a traffic engineering policy that steers specific destination groups toward the preferred ISP for outbound traffic, and steers specific source prefixes through the preferred ISP for inbound traffic. The default route to R4 must only be advertised when ISP-A is confirmed reachable — protecting R4 from a black-hole condition during an ISP-A outage.
+The network operations team has received the following requirements:
 
-The starting configuration is the Lab 06 solution. Community infrastructure, eBGP and iBGP sessions, and a basic LP policy are already in place. This lab replaces the flat LP policy with a per-destination policy and adds per-prefix outbound prepending.
+1. **HA Validation** — confirm automatic failover when either ISP link fails
+2. **Outbound TE** — route traffic to ISP-A prefixes (198.51.100.x) via ISP-A; route traffic to ISP-B prefixes (203.0.113.x) via ISP-B
+3. **Inbound TE** — steer return traffic for 192.168.1.0/24 to enter via ISP-B; steer return traffic for 192.168.2.0/24 to enter via ISP-A
+4. **MED Signaling** — advertise a lower MED for 192.168.3.0/24 via ISP-A so ISP-A is the preferred entry for that prefix
+5. **Conditional Default** — propagate a default route to R4 (Enterprise Internal) only while ISP connectivity is verified
 
-### Topology Diagram
+### ASCII Topology
 
 ```
-                  AS 65002 (ISP-A)
-                      R2
-                 172.16.2.2
-              Fa0/0        Fa1/0
-              .2                .1
-    10.1.12.0/30          10.1.23.0/30
-              .1                .2
-           Fa1/0            Fa0/0
-  AS 65001      R1        R3          AS 65003 (ISP-B)
-  Enterprise  172.16.1.1  172.16.3.3
-  Edge        Fa1/1    Fa1/0          Fa1/1
-               .1        .2             .1
-         10.1.13.0/30              10.1.35.0/30
-                                         .2
-               Fa0/0                  Fa0/0
-                 .1                    R5
-            10.1.14.0/30         172.16.5.5
-                 .2             AS 65004
-               Fa0/0       (Downstream Customer)
-                 R4
-            172.16.4.4
-         AS 65001 (Internal)
+        ┌─────────────────────┐    10.1.23.0/30    ┌─────────────────────┐
+        │        R2           │  Fa1/0      Fa0/0  │        R3           │
+        │      (ISP-A)        ├────────────────────┤      (ISP-B)        │
+        │    AS 65002         │     .1        .2   │    AS 65003         │
+        │  Lo0: 172.16.2.2    │                    │  Lo0: 172.16.3.3    │
+        └──────────┬──────────┘                    └──────┬──────────────┘
+          Fa0/0    │ .2                          .2 │ Fa1/0          │ Fa1/1 .1
+     10.1.12.0/30  │                  10.1.13.0/30  │           10.1.35.0/30
+          Fa1/0    │ .1                          .1 │ Fa1/1          │ Fa0/0 .2
+                   └──────────────┐  ┌──────────────┘               │
+                                  │  │                               │
+                         ┌────────┴──┴─────────┐          ┌─────────┴──────────┐
+                         │          R1          │          │        R5          │
+                         │  (Enterprise Edge)   │          │  (Downstream Cust) │
+                         │     AS 65001         │          │    AS 65004        │
+                         │  Lo0: 172.16.1.1     │          │  Lo0: 172.16.5.5   │
+                         └──────────┬───────────┘          └────────────────────┘
+                           Fa0/0    │ .1
+                       10.1.14.0/30 │
+                           Fa0/0    │ .2
+                         ┌──────────┴───────────┐
+                         │          R4          │
+                         │  (Enterprise Int.)   │
+                         │     AS 65001         │
+                         │  Lo0: 172.16.4.4     │
+                         └──────────────────────┘
 ```
 
-### Addressing Summary
+### IP Addressing Summary
 
 | Device | Interface | IP Address | Description |
-|---|---|---|---|
-| R1 | Loopback0 | 172.16.1.1/32 | Router-ID |
-| R1 | Loopback1 | 192.168.1.1/24 | Enterprise subnet 1 |
-| R1 | Loopback2 | 192.168.2.1/24 | Enterprise subnet 2 |
-| R1 | Loopback3 | 192.168.3.1/24 | Enterprise subnet 3 |
+|--------|-----------|------------|-------------|
 | R1 | Fa0/0 | 10.1.14.1/30 | Link to R4 |
 | R1 | Fa1/0 | 10.1.12.1/30 | Link to R2 (ISP-A) |
 | R1 | Fa1/1 | 10.1.13.1/30 | Link to R3 (ISP-B) |
-| R2 | Loopback0 | 172.16.2.2/32 | Router-ID |
-| R2 | Loopback1 | 198.51.100.1/24 | ISP-A prefix |
-| R2 | Loopback2 | 198.51.101.1/24 | ISP-A prefix |
-| R2 | Loopback3 | 198.51.102.1/24 | ISP-A prefix |
+| R1 | Lo0 | 172.16.1.1/32 | Router ID / iBGP source |
+| R1 | Lo1–Lo3 | 192.168.1–3.1/24 | Enterprise prefixes |
 | R2 | Fa0/0 | 10.1.12.2/30 | Link to R1 |
 | R2 | Fa1/0 | 10.1.23.1/30 | Link to R3 |
-| R3 | Loopback0 | 172.16.3.3/32 | Router-ID |
-| R3 | Loopback1 | 203.0.113.1/24 | ISP-B prefix |
-| R3 | Loopback2 | 203.0.114.1/24 | ISP-B prefix |
-| R3 | Loopback3 | 203.0.115.1/24 | ISP-B prefix |
+| R2 | Lo0 | 172.16.2.2/32 | Router ID |
+| R2 | Lo1–Lo3 | 198.51.100–102.1/24 | ISP-A prefixes |
 | R3 | Fa0/0 | 10.1.23.2/30 | Link to R2 |
 | R3 | Fa1/0 | 10.1.13.2/30 | Link to R1 |
 | R3 | Fa1/1 | 10.1.35.1/30 | Link to R5 |
-| R4 | Loopback0 | 172.16.4.4/32 | Router-ID |
-| R4 | Loopback1 | 10.4.1.1/24 | Enterprise internal subnet |
-| R4 | Loopback2 | 10.4.2.1/24 | Enterprise internal subnet |
+| R3 | Lo0 | 172.16.3.3/32 | Router ID |
+| R3 | Lo1–Lo3 | 203.0.113–115.1/24 | ISP-B prefixes |
 | R4 | Fa0/0 | 10.1.14.2/30 | Link to R1 |
-| R5 | Loopback0 | 172.16.5.5/32 | Router-ID |
-| R5 | Loopback1 | 10.5.1.1/24 | Customer subnet |
-| R5 | Loopback2 | 10.5.2.1/24 | Customer subnet |
+| R4 | Lo0 | 172.16.4.4/32 | Router ID / iBGP source |
 | R5 | Fa0/0 | 10.1.35.2/30 | Link to R3 |
-
-### BGP Session Summary
-
-| Session | Type | AS Pair | Interface |
-|---|---|---|---|
-| R1 — R2 | eBGP | 65001 — 65002 | 10.1.12.0/30 |
-| R1 — R3 | eBGP | 65001 — 65003 | 10.1.13.0/30 |
-| R1 — R4 | iBGP | 65001 (loopback) | via OSPF |
-| R2 — R3 | eBGP | 65002 — 65003 | 10.1.23.0/30 |
-| R3 — R5 | eBGP | 65003 — 65004 | 10.1.35.0/30 |
+| R5 | Lo0 | 172.16.5.5/32 | Router ID |
+| R5 | Lo1–Lo2 | 10.4.10–20.1/24 | Customer prefixes |
 
 ---
 
 ## 3. Hardware & Environment Specifications
 
-### GNS3 Device Table
+### Device Specifications
 
-| Device | Role | Platform | AS | Loopback | Console Port |
-|---|---|---|---|---|---|
-| R1 | Enterprise Edge | c7200 | 65001 | 172.16.1.1/32 | 5001 |
-| R2 | ISP-A | c7200 | 65002 | 172.16.2.2/32 | 5002 |
-| R3 | ISP-B | c7200 | 65003 | 172.16.3.3/32 | 5003 |
-| R4 | Enterprise Internal | c3725 | 65001 | 172.16.4.4/32 | 5004 |
-| R5 | Downstream Customer | c3725 | 65004 | 172.16.5.5/32 | 5005 |
+| Device | Platform | Role | AS | Console Port |
+|--------|----------|------|----|--------------|
+| R1 | c7200 | Enterprise Edge | 65001 | 5001 |
+| R2 | c7200 | ISP-A | 65002 | 5002 |
+| R3 | c7200 | ISP-B | 65003 | 5003 |
+| R4 | c3725 | Enterprise Internal | 65001 | 5004 |
+| R5 | c3725 | Downstream Customer | 65004 | 5005 |
 
 ### Console Access Table
 
-| Device | Console Port | Telnet Command |
-|---|---|---|
-| R1 | 5001 | telnet 127.0.0.1 5001 |
-| R2 | 5002 | telnet 127.0.0.1 5002 |
-| R3 | 5003 | telnet 127.0.0.1 5003 |
-| R4 | 5004 | telnet 127.0.0.1 5004 |
-| R5 | 5005 | telnet 127.0.0.1 5005 |
+| Device | Port | Connection Command |
+|--------|------|--------------------|
+| R1 | 5001 | `telnet 127.0.0.1 5001` |
+| R2 | 5002 | `telnet 127.0.0.1 5002` |
+| R3 | 5003 | `telnet 127.0.0.1 5003` |
+| R4 | 5004 | `telnet 127.0.0.1 5004` |
+| R5 | 5005 | `telnet 127.0.0.1 5005` |
 
-### Platform Notes
+### Cabling Summary
 
-- **c7200**: Used for R1, R2, R3. Supports Fa0/0, Fa1/0, Fa1/1, Gi3/0, s2/0-s2/3.
-- **c3725**: Used for R4, R5. Supports Fa0/0, Fa0/1, Fa1/0-Fa1/15 (switch), s2/0-s2/3.
-- All routers run Cisco IOS 12.4 or 12.4T.
-- Local Preference is an iBGP-only attribute — it is never advertised to eBGP peers.
-- MED is only compared between routes from the same neighboring AS unless `bgp always-compare-med` is configured.
+| Link ID | Source | Destination | Subnet | Purpose |
+|---------|--------|-------------|--------|---------|
+| L1 | R1:Fa1/0 | R2:Fa0/0 | 10.1.12.0/30 | Enterprise to ISP-A (eBGP) |
+| L2 | R1:Fa1/1 | R3:Fa1/0 | 10.1.13.0/30 | Enterprise to ISP-B (eBGP) |
+| L3 | R2:Fa1/0 | R3:Fa0/0 | 10.1.23.0/30 | ISP-A to ISP-B (eBGP) |
+| L4 | R1:Fa0/0 | R4:Fa0/0 | 10.1.14.0/30 | Enterprise Edge to Internal (iBGP) |
+| L5 | R3:Fa1/1 | R5:Fa0/0 | 10.1.35.0/30 | ISP-B to Downstream Customer (eBGP) |
 
 ---
 
 ## 4. Base Configuration
 
-The initial configuration for this lab is the complete solution from Lab 06 (Communities & Policy Control). All BGP infrastructure — sessions, community tagging, and the initial LP policy — is already in place.
+### What Is Pre-Configured
 
-### What is already configured
+The initial configurations carry forward all lab-06 (BGP Communities & Policy Control) solutions:
 
-**R1 (inherited from Lab 06):**
-- Interface IP addressing on all interfaces
-- OSPF area 0 with R4 (for iBGP loopback reachability)
-- eBGP sessions: R1-R2 (10.1.12.2), R1-R3 (10.1.13.2)
-- iBGP session: R1-R4 (172.16.4.4, loopback-sourced, next-hop-self)
-- Route-maps: `SET-LP-200-ISP-A`, `POLICY-ISP-B-IN`, `PREPEND-TO-ISP-B`, `SET-COMMUNITY-OUT`
-- Prefix-lists: `ENTERPRISE-PREFIXES`, `DENY-203-115`
-- Community-list: `CUSTOMER-ROUTES` (permits 65003:500)
-- `send-community` enabled on all neighbors
-- `soft-reconfiguration inbound` enabled on eBGP neighbors
-- Networks advertised: 172.16.1.1/32, 192.168.1.0/24, 192.168.2.0/24, 192.168.3.0/24
+- IP addressing on all interfaces (loopbacks, point-to-point links)
+- OSPF process between R1 and R4 for internal loopback reachability
+- eBGP sessions: R1–R2, R1–R3, R2–R3, R3–R5
+- iBGP session: R1–R4 (loopback-sourced, next-hop-self)
+- BGP network statements advertising all enterprise and ISP prefixes
+- Lab-06 community and route-map policies (as starting point to replace)
+- Soft-reconfiguration inbound on all policy-relevant sessions
 
-**R2 (ISP-A):**
-- eBGP to R1 and R3
-- Loopback prefixes 198.51.100-102.0/24 advertised into BGP
-- `send-community` enabled
+### What Is NOT Pre-Configured
 
-**R3 (ISP-B):**
-- eBGP to R1, R2, and R5
-- Loopback prefixes 203.0.113-115.0/24 advertised into BGP
-- Route-map `TAG-CUSTOMER-IN` tagging R5 routes with community 65003:500
-- `send-community` enabled
+Students must design and implement:
 
-**R4 (Enterprise Internal):**
-- iBGP to R1 via loopback
-- Internal prefixes 10.4.1.0/24 and 10.4.2.0/24 with `no-export` community
+- Per-prefix Local Preference policy for outbound ISP selection
+- Per-prefix AS-path prepending for inbound traffic engineering
+- MED values on outbound advertisements for preferred entry signaling
+- Conditional default route origination to R4
 
-**R5 (Downstream Customer):**
-- eBGP to R3
-- Customer prefixes 10.5.1.0/24 and 10.5.2.0/24 advertised
-
-### Load Initial Configs
-
-```bash
-# Option 1: Automated setup (recommended)
-python3 labs/bgp/lab-07-multihoming-te/setup_lab.py
-
-# Option 2: Manual — paste each router's initial-configs/*.cfg via console
-```
-
-### Verify Base State
-
-After loading, confirm the Lab 06 BGP state is intact on R1:
-
-```
-R1# show ip bgp summary
-R1# show ip bgp
-R1# show ip ospf neighbor
-```
-
-Confirm the existing LP policy is in place:
-
-```
-R1# show route-map SET-LP-200-ISP-A
-R1# show route-map POLICY-ISP-B-IN
-```
-
-Expected: R1 BGP table shows ISP-A routes with LP=200, ISP-B routes with LP=150 or LP=120.
+> **Note:** The lab-06 route-maps (community tagging, basic LP, AS-path prepend to ISP-B) must be replaced with the lab-07 traffic engineering policies.
 
 ---
 
-## 5. Lab Challenge
+## 5. Lab Challenge: Core Implementation
 
-Complete all four tasks in order. Each task builds on the previous one.
+### Task 1: Dual-Homed eBGP Baseline Verification
 
----
+- Confirm that both ISP sessions (R1–R2 and R1–R3) are established and actively exchanging prefixes.
+- Verify that R1's BGP table contains paths for all ISP-A prefixes (198.51.100–102.0/24) and all ISP-B prefixes (203.0.113–115.0/24).
+- Confirm that both ISPs have learned the enterprise prefixes (192.168.1–3.0/24).
+- Simulate a link failure by administratively shutting R1's ISP-A interface and verify that all 198.51.100.x prefixes are still reachable via ISP-B (through R3's peering with R2). Re-enable the interface when done.
 
-### Task 1 — Outbound Traffic Engineering via Local Preference
-
-**Objective:** Replace the existing flat LP route-maps with per-destination-group LP policies so that each ISP is preferred for the destinations it originates.
-
-**Background:** The current policy applies LP=200 to all ISP-A routes. This is a blunt instrument — ISP-B is always secondary regardless of where the destination lives. The improved design assigns LP=200 to the ISP that originates the destination, making ISP-A preferred for ISP-A prefixes (198.51.x.x) and ISP-B preferred for ISP-B prefixes (203.0.x.x). Customer routes (tagged 65003:500) are deprioritized at LP=120 on both ISPs.
-
-**Step 1: Create prefix-lists for per-destination matching**
-
-```
-ip prefix-list ISP-A-PREFIXES seq 10 permit 198.51.100.0/24
-ip prefix-list ISP-A-PREFIXES seq 20 permit 198.51.101.0/24
-ip prefix-list ISP-A-PREFIXES seq 30 permit 198.51.102.0/24
-
-ip prefix-list ISP-B-PREFIXES seq 10 permit 203.0.113.0/24
-ip prefix-list ISP-B-PREFIXES seq 20 permit 203.0.114.0/24
-ip prefix-list ISP-B-PREFIXES seq 30 permit 203.0.115.0/24
-```
-
-**Step 2: Build the LP-FROM-ISP-A route-map (applied inbound from R2)**
-
-```
-route-map LP-FROM-ISP-A permit 10
- match ip address prefix-list ISP-A-PREFIXES
- set local-preference 200
-!
-route-map LP-FROM-ISP-A permit 20
- match community CUSTOMER-ROUTES
- set local-preference 120
-!
-route-map LP-FROM-ISP-A permit 30
- set local-preference 150
-```
-
-Sequence 10 catches ISP-A's own prefixes and marks them highest priority.
-Sequence 20 catches customer routes (65003:500) that arrived via ISP-A and deprioritizes them.
-Sequence 30 is the catch-all — all other ISP-A routes receive LP=150.
-
-**Step 3: Build the LP-FROM-ISP-B route-map (applied inbound from R3)**
-
-```
-route-map LP-FROM-ISP-B permit 10
- match ip address prefix-list ISP-B-PREFIXES
- set local-preference 200
-!
-route-map LP-FROM-ISP-B permit 20
- match community CUSTOMER-ROUTES
- set local-preference 120
-!
-route-map LP-FROM-ISP-B permit 30
- set local-preference 150
-```
-
-Sequence 10 catches ISP-B's own prefixes and marks them highest priority.
-Sequence 20 catches customer routes and deprioritizes them.
-Sequence 30 is the catch-all at LP=150.
-
-**Step 4: Apply the new route-maps, replacing the old ones**
-
-```
-router bgp 65001
- no neighbor 10.1.12.2 route-map SET-LP-200-ISP-A in
- no neighbor 10.1.13.2 route-map POLICY-ISP-B-IN in
- neighbor 10.1.12.2 route-map LP-FROM-ISP-A in
- neighbor 10.1.13.2 route-map LP-FROM-ISP-B in
-```
-
-**Step 5: Soft-reset inbound sessions to apply the new policy**
-
-```
-R1# clear ip bgp 10.1.12.2 soft in
-R1# clear ip bgp 10.1.13.2 soft in
-```
-
-**Expected outcome:** ISP-A prefixes (198.51.x.x) show LP=200 via R2. ISP-B prefixes (203.0.x.x) show LP=200 via R3. Customer routes (10.5.x.x) show LP=120 on both paths.
+**Verification:** `show ip bgp summary` must show both ISP sessions in Established state. `show ip bgp 198.51.100.0` must show two paths (direct from R2 and via R3) when both links are up. After shutting the ISP-A interface, the prefix must still be reachable with the best path switching to the ISP-B path.
 
 ---
 
-### Task 2 — Inbound Traffic Engineering via AS-Path Prepending
+### Task 2: Per-Prefix Outbound Traffic Engineering
 
-**Objective:** Engineer which ISP the internet uses to reach each enterprise prefix by applying per-prefix AS-path prepending and MED values to outbound advertisements.
+Design a Local Preference policy on R1 that controls which ISP is used for outbound traffic based on the destination prefix type:
 
-**Background:** The three enterprise prefixes serve different traffic profiles. Prefix 192.168.1.0/24 should be reached primarily via ISP-A. Prefix 192.168.2.0/24 should be reached primarily via ISP-B. Prefix 192.168.3.0/24 is load-balanced across both ISPs (equal MED). By prepending the AS-path on the non-preferred ISP and setting a lower MED on the preferred ISP, the internet is steered toward the desired ingress.
+- Routes received from ISP-A that belong to ISP-A's address space (198.51.100–102.0/24) should receive Local Preference 200. All other routes received from ISP-A should receive Local Preference 100.
+- Routes received from ISP-B that belong to ISP-B's address space (203.0.113–115.0/24) should receive Local Preference 200. All other routes received from ISP-B should receive Local Preference 100.
+- Apply these policies as inbound route-maps on each ISP eBGP session.
+- Remove the lab-06 route-maps from both ISP neighbors and replace them with the new per-prefix LP policies.
 
-**Step 1: Create per-prefix prefix-lists**
-
-```
-ip prefix-list PREFIX-192-168-1 seq 10 permit 192.168.1.0/24
-ip prefix-list PREFIX-192-168-2 seq 10 permit 192.168.2.0/24
-ip prefix-list PREFIX-192-168-3 seq 10 permit 192.168.3.0/24
-```
-
-**Step 2: Build the TE-TO-ISP-A route-map (applied outbound to R2)**
-
-```
-route-map TE-TO-ISP-A permit 10
- match ip address prefix-list PREFIX-192-168-2
- set as-path prepend 65001 65001 65001
- set metric 100
-!
-route-map TE-TO-ISP-A permit 20
- match ip address prefix-list PREFIX-192-168-1
- set metric 10
- set community 65001:100 additive
-!
-route-map TE-TO-ISP-A permit 30
- match ip address prefix-list PREFIX-192-168-3
- set metric 50
- set community 65001:100 additive
-!
-route-map TE-TO-ISP-A permit 40
- set community 65001:100 additive
-```
-
-Sequence 10: 192.168.2.0/24 is prepended three times and given MED=100 — the internet should reach this prefix via ISP-B, not ISP-A. The long AS-path discourages any path via ISP-A.
-Sequence 20: 192.168.1.0/24 gets MED=10 (low MED = preferred) — ISP-A is the preferred ingress for this prefix.
-Sequence 30: 192.168.3.0/24 gets MED=50 — balanced between the two ISPs.
-Sequence 40: Pass-through for all other prefixes, applying enterprise community tag.
-
-**Step 3: Build the TE-TO-ISP-B route-map (applied outbound to R3)**
-
-```
-route-map TE-TO-ISP-B permit 10
- match ip address prefix-list PREFIX-192-168-1
- set as-path prepend 65001 65001 65001
- set metric 100
-!
-route-map TE-TO-ISP-B permit 20
- match ip address prefix-list PREFIX-192-168-2
- set metric 10
- set community 65001:100 additive
-!
-route-map TE-TO-ISP-B permit 30
- match ip address prefix-list PREFIX-192-168-3
- set metric 50
- set community 65001:100 additive
-!
-route-map TE-TO-ISP-B permit 40
- set community 65001:100 additive
-```
-
-Sequence 10: 192.168.1.0/24 is prepended three times — the internet should not use ISP-B to reach this prefix.
-Sequence 20: 192.168.2.0/24 gets MED=10 — ISP-B is the preferred ingress for this prefix.
-Sequence 30: 192.168.3.0/24 gets MED=50 — balanced.
-Sequence 40: Pass-through for all other prefixes.
-
-**Step 4: Apply the new outbound TE route-maps, replacing the old PREPEND-TO-ISP-B**
-
-```
-router bgp 65001
- no neighbor 10.1.13.2 route-map PREPEND-TO-ISP-B out
- no neighbor 10.1.12.2 route-map SET-COMMUNITY-OUT out
- neighbor 10.1.12.2 route-map TE-TO-ISP-A out
- neighbor 10.1.13.2 route-map TE-TO-ISP-B out
-```
-
-**Step 5: Soft-reset outbound sessions**
-
-```
-R1# clear ip bgp 10.1.12.2 soft out
-R1# clear ip bgp 10.1.13.2 soft out
-```
-
-**Expected outcome:** R2's BGP table shows 192.168.2.0/24 with a 3-hop prepended AS-path and MED=100. R3's BGP table shows 192.168.1.0/24 with a 3-hop prepended AS-path and MED=100.
+**Verification:** `show ip bgp 198.51.100.0` must show the path via R2 as best with `localpref 200`. `show ip bgp 203.0.113.0` must show the path via R3 as best with `localpref 200`. Running `show ip bgp` should show ISP-A prefixes (198.x.x.x) with the R2 path marked `>` and ISP-B prefixes (203.x.x.x) with the R3 path marked `>`.
 
 ---
 
-### Task 3 — MED for Inbound Traffic Hints
+### Task 3: Per-Prefix Inbound Traffic Engineering via AS-Path Prepending
 
-**Objective:** Understand the relationship between MED and AS-path prepending and verify that MED values appear in the BGP tables of the directly connected ISPs.
+Design outbound route-maps on R1 to influence how internet hosts reach the enterprise prefixes:
 
-**Background:** MED (Multi-Exit Discriminator) is a soft inbound traffic hint. When an enterprise is connected to a single ISP at two physical locations, MED tells that ISP which entrance the enterprise prefers. However, MED has a critical limitation: by default, IOS only compares MED values between routes received from the **same neighboring AS**. If ISP-A learns of 192.168.1.0/24 from both R1 directly (low MED) and via ISP-B (different AS), IOS does not compare those MED values unless `bgp always-compare-med` is configured on ISP-A.
+- When advertising 192.168.1.0/24 to ISP-A (R2), prepend the AS number three additional times. This makes the AS-path longer via ISP-A, causing internet routers that compare paths from both ISPs to prefer the ISP-B path for inbound traffic to 192.168.1.0/24.
+- When advertising 192.168.2.0/24 to ISP-B (R3), prepend the AS number three additional times. This makes internet routers prefer the ISP-A path for inbound traffic to 192.168.2.0/24.
+- Advertise 192.168.3.0/24 to both ISPs without any prepending.
+- Apply these policies as outbound route-maps on each ISP eBGP session.
 
-AS-path prepending, by contrast, is visible to all ASes along the path — it changes the fundamental path length attribute, which all BGP speakers compare regardless of origin AS. For true multi-hop inbound traffic engineering, prepending is the reliable tool. MED is a supplementary hint for the directly connected ISP only.
-
-**Verify MED values appear in R2's table for advertised routes:**
-
-```
-R1# show ip bgp neighbors 10.1.12.2 advertised-routes
-```
-
-Expected output (relevant lines):
-
-```
-Network          Next Hop         Metric  LocPrf  Weight  Path
-*> 192.168.1.0   0.0.0.0              10                  32768 i
-*> 192.168.2.0   0.0.0.0             100                  32768 65001 65001 65001 i
-*> 192.168.3.0   0.0.0.0              50                  32768 i
-```
-
-The Metric column shows the MED value. Confirm that R2 sees the MED values and the prepended AS-path for 192.168.2.0/24.
-
-**Verify on R2:**
-
-```
-R2# show ip bgp 192.168.2.0
-```
-
-Expected: AS-path shows `65001 65001 65001 65001` (four instances — original plus three prepended) and MED=100.
-
-```
-R2# show ip bgp 192.168.1.0
-```
-
-Expected: AS-path shows `65001` (no prepend), MED=10.
-
-No additional configuration is required for this task. It is a verification and conceptual task that confirms the work from Task 2.
+**Verification:** On R2, `show ip bgp 192.168.1.0` must show an AS-path of `65001 65001 65001 65001` (original + 3 prepends). On R3, `show ip bgp 192.168.1.0` must show an AS-path of `65001` (no prepend). On R3, `show ip bgp 192.168.2.0` must show an AS-path of `65001 65001 65001 65001`. On R2, `show ip bgp 192.168.2.0` must show an AS-path of `65001`.
 
 ---
 
-### Task 4 — Conditional Default Route Origination
+### Task 4: MED-Based Preferred Entry Signaling
 
-**Objective:** Configure R1 to advertise a default route 0.0.0.0/0 to R4 only when ISP-A is confirmed reachable (198.51.100.0/24 is present in R1's BGP table).
+Extend the outbound route-maps from Task 3 to set MED values, signaling ISP-A as the preferred entry point for 192.168.3.0/24:
 
-**Background:** Without a conditional check, R1 would always advertise a default route to R4 — even during an ISP-A failure. If ISP-B is also down, R4 would forward all traffic toward R1 and into a black hole. The `default-originate route-map` feature makes the default advertisement conditional: R1 checks its local BGP table for a specific prefix (the condition), and only originates the default if that prefix is present.
+- When advertising 192.168.3.0/24 to ISP-A, set MED to 10 (low value = preferred entry).
+- When advertising 192.168.3.0/24 to ISP-B, set MED to 100 (high value = less preferred entry).
+- The MED attribute is compared by BGP when paths to the same prefix arrive from routers in the same neighboring AS. Verify that R2 and R3 each see the expected MED value for this prefix.
 
-**Step 1: Create the null static route (required for origination)**
+**Verification:** On R2, `show ip bgp 192.168.3.0` must show `metric 10` in the path attributes. On R3, `show ip bgp 192.168.3.0` must show `metric 100`. The MED values are set by R1 in its outbound advertisements and are visible in the ISP routers' BGP tables.
 
-```
-ip route 0.0.0.0 0.0.0.0 Null0
-```
+---
 
-This static route does not affect forwarding — it provides the BGP process with a route to originate. The conditional route-map controls whether it is actually sent to R4.
+### Task 5: Conditional Default Route Origination
 
-**Step 2: Create the condition prefix-list**
+Configure R1 to advertise a default route to R4 (iBGP) only when ISP connectivity is confirmed:
 
-```
-ip prefix-list COND-DEFAULT-CHECK seq 10 permit 198.51.100.0/24
-```
+- Create a prefix-list that matches 198.51.100.0/24, which is a sentinel prefix that appears in R1's BGP table only when ISP-A is reachable.
+- Create a route-map that permits only if the sentinel prefix is matched in the BGP table.
+- Apply this route-map as a condition on R1's conditional default-originate command toward R4.
+- Verify that R4 receives the default route when R1 has ISP-A prefixes. Verify that R4 does not receive a default route if you simulate the condition being absent by testing with a non-matching prefix-list.
 
-This prefix-list matches the ISP-A reachability indicator. If 198.51.100.0/24 is in R1's BGP table, the condition is satisfied.
-
-**Step 3: Create the conditional route-map**
-
-```
-route-map COND-DEFAULT permit 10
- match ip address prefix-list COND-DEFAULT-CHECK
-```
-
-The route-map matches only when the condition prefix is present. The BGP process evaluates this route-map against the local BGP table — if any prefix in the table matches, the default is advertised to R4.
-
-**Step 4: Apply conditional default-originate to the iBGP neighbor**
-
-```
-router bgp 65001
- neighbor 172.16.4.4 default-originate route-map COND-DEFAULT
-```
-
-**Step 5: Soft-reset the iBGP session**
-
-```
-R1# clear ip bgp 172.16.4.4 soft out
-```
-
-**Expected outcome:** R4 receives a default route from R1 when ISP-A is up. If 198.51.100.0/24 is removed from R1's BGP table (simulating ISP-A failure), the default route is withdrawn from R4 within the BGP hold-down timer.
+**Verification:** On R4, `show ip bgp` must show `0.0.0.0/0` with next-hop 172.16.1.1 and `show ip route 0.0.0.0` must show `B* 0.0.0.0/0 [200/0] via 172.16.1.1`. On R1, `show ip bgp neighbors 172.16.4.4 advertised-routes` must include `0.0.0.0/0`.
 
 ---
 
 ## 6. Verification & Analysis
 
-### Task 1 Verification — Local Preference Policy
-
-**Step 1: Verify LP hierarchy on R1**
+### Task 1: Dual-Homed eBGP Baseline
 
 ```
-R1# show ip bgp
+R1# show ip bgp summary
+BGP router identifier 172.16.1.1, local AS number 65001
+Neighbor        V    AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd
+10.1.12.2       4 65002      45      42       18    0    0 00:15:22        4  ! ← ISP-A Up, 4 prefixes
+10.1.13.2       4 65003      38      35       18    0    0 00:14:55        4  ! ← ISP-B Up, 4 prefixes
+172.16.4.4      4 65001      22      20       18    0    0 00:12:10        3  ! ← R4 iBGP Up
+
+R1# show ip bgp 198.51.100.0
+BGP routing table entry for 198.51.100.0/24, version 5
+Paths: (2 available, best #1, table Default-IP-Routing-Table)
+  Advertised to update-groups:
+     1
+  65002                                                         ! ← AS-path: 1 hop via ISP-A
+    10.1.12.2 from 10.1.12.2 (172.16.2.2)
+      Origin IGP, metric 0, localpref 100, valid, external, best  ! ← direct from R2, best
+  65002                                                         ! ← same AS, learned via R3
+    10.1.13.2 from 10.1.13.2 (172.16.3.3)
+      Origin IGP, metric 0, localpref 100, valid, external         ! ← backup path via R3
 ```
 
-Expected output (key columns):
-
-```
-   Network          Next Hop     Metric  LocPrf  Weight  Path
-*> 198.51.100.0/24  10.1.12.2       0      200      0   65002 i
-*> 198.51.101.0/24  10.1.12.2       0      200      0   65002 i
-*> 198.51.102.0/24  10.1.12.2       0      200      0   65002 i
-*> 203.0.113.0/24   10.1.13.2       0      200      0   65003 i
-*> 203.0.114.0/24   10.1.13.2       0      200      0   65003 i
-*> 203.0.115.0/24   10.1.13.2       0      200      0   65003 i
-*  198.51.100.0/24  10.1.13.2       0      150      0   65003 65002 i
-*  203.0.113.0/24   10.1.12.2       0      150      0   65002 65003 i
-*> 10.5.1.0/24      10.1.13.2       0      120      0   65003 65004 i
-*> 10.5.2.0/24      10.1.13.2       0      120      0   65003 65004 i
-```
-
-The `>` marker indicates best path. ISP-A prefixes should be best via 10.1.12.2. ISP-B prefixes should be best via 10.1.13.2. Customer routes should show LP=120 via 10.1.13.2.
-
-**Step 2: Verify route-map is applied**
-
-```
-R1# show route-map LP-FROM-ISP-A
-R1# show route-map LP-FROM-ISP-B
-```
-
-Expected: Both route-maps exist with three sequences. Match counts increment after the soft-reset.
-
-**Step 3: Verify a specific prefix**
+### Task 2: Per-Prefix Outbound TE with Local Preference
 
 ```
 R1# show ip bgp 198.51.100.0
-```
+...
+  65002
+    10.1.12.2 from 10.1.12.2 (172.16.2.2)
+      Origin IGP, localpref 200, valid, external, best  ! ← LP=200, ISP-A preferred for ISP-A prefixes
+  65002
+    10.1.13.2 from 10.1.13.2 (172.16.3.3)
+      Origin IGP, localpref 100, valid, external        ! ← LP=100, ISP-B path not preferred
 
-Expected: Best path via 10.1.12.2 with local preference 200. Alternate path via 10.1.13.2 with local preference 150.
-
-```
 R1# show ip bgp 203.0.113.0
+...
+  65003
+    10.1.13.2 from 10.1.13.2 (172.16.3.3)
+      Origin IGP, localpref 200, valid, external, best  ! ← LP=200, ISP-B preferred for ISP-B prefixes
+  65003
+    10.1.12.2 from 10.1.12.2 (172.16.2.2)
+      Origin IGP, localpref 100, valid, external        ! ← LP=100, ISP-A path not preferred
+
+R1# show ip bgp | include Network|>
+   Network          Next Hop            Metric LocPrf Weight Path
+*> 172.16.1.1/32    0.0.0.0                  0         32768 i
+*> 192.168.1.0      0.0.0.0                  0         32768 i
+*> 192.168.2.0      0.0.0.0                  0         32768 i
+*> 192.168.3.0      0.0.0.0                  0         32768 i
+*> 198.51.100.0     10.1.12.2                0    200      0 65002 i  ! ← via R2, LP=200
+*  198.51.100.0     10.1.13.2                0    100      0 65002 i  ! ← via R3, LP=100
+*> 203.0.113.0      10.1.13.2                0    200      0 65003 i  ! ← via R3, LP=200
+*  203.0.113.0      10.1.12.2                0    100      0 65003 i  ! ← via R2, LP=100
 ```
 
-Expected: Best path via 10.1.13.2 with local preference 200. Alternate path via 10.1.12.2 with local preference 150.
-
-```
-R1# show ip bgp 10.5.1.0
-```
-
-Expected: Local preference 120 on the path via 10.1.13.2.
-
----
-
-### Task 2 Verification — Inbound Traffic Engineering
-
-**Step 1: Verify advertised routes to ISP-A (R2)**
-
-```
-R1# show ip bgp neighbors 10.1.12.2 advertised-routes
-```
-
-Expected output (relevant lines):
-
-```
-Network          Next Hop         Metric  LocPrf  Weight  Path
-*> 192.168.1.0   0.0.0.0              10                  32768 i
-*> 192.168.2.0   0.0.0.0             100                  32768 65001 65001 65001 i
-*> 192.168.3.0   0.0.0.0              50                  32768 i
-```
-
-192.168.2.0/24 must show the 3x prepend (AS-path length 4) and MED=100.
-192.168.1.0/24 must show no prepend and MED=10.
-
-**Step 2: Verify advertised routes to ISP-B (R3)**
-
-```
-R1# show ip bgp neighbors 10.1.13.2 advertised-routes
-```
-
-Expected output:
-
-```
-Network          Next Hop         Metric  LocPrf  Weight  Path
-*> 192.168.1.0   0.0.0.0             100                  32768 65001 65001 65001 i
-*> 192.168.2.0   0.0.0.0              10                  32768 i
-*> 192.168.3.0   0.0.0.0              50                  32768 i
-```
-
-192.168.1.0/24 must show the 3x prepend and MED=100 to ISP-B.
-192.168.2.0/24 must show no prepend and MED=10 to ISP-B.
-
-**Step 3: Verify on R2 that the AS-path prepend is visible**
-
-```
-R2# show ip bgp 192.168.2.0
-```
-
-Expected: AS-path `65001 65001 65001 65001` (four hops — the remote AS sees your full prepended path).
+### Task 3: Per-Prefix Inbound TE with AS-Path Prepending
 
 ```
 R2# show ip bgp 192.168.1.0
-```
+BGP routing table entry for 192.168.1.0/24, version 3
+Paths: (1 available, best #1, table Default-IP-Routing-Table)
+  65001 65001 65001 65001                                    ! ← 4 AS hops (1 original + 3 prepends)
+    10.1.12.1 from 10.1.12.1 (172.16.1.1)
+      Origin IGP, metric 0, localpref 100, valid, external, best
 
-Expected: AS-path `65001` (single hop, no prepend, preferred ingress via ISP-A).
-
-**Step 4: Verify on R3 that the AS-path prepend is visible**
-
-```
 R3# show ip bgp 192.168.1.0
+BGP routing table entry for 192.168.1.0/24, version 3
+Paths: (1 available, best #1, table Default-IP-Routing-Table)
+  65001                                                     ! ← 1 AS hop (no prepend to ISP-B)
+    10.1.13.1 from 10.1.13.1 (172.16.1.1)
+      Origin IGP, metric 0, localpref 100, valid, external, best  ! ← ISP-B is shorter path
+
+R3# show ip bgp 192.168.2.0
+BGP routing table entry for 192.168.2.0/24, version 4
+Paths: (1 available, best #1, table Default-IP-Routing-Table)
+  65001 65001 65001 65001                                    ! ← 4 AS hops (3 prepends to ISP-B)
+    10.1.13.1 from 10.1.13.1 (172.16.1.1)
+      Origin IGP, metric 0, localpref 100, valid, external, best
+
+R2# show ip bgp 192.168.2.0
+BGP routing table entry for 192.168.2.0/24, version 4
+Paths: (1 available, best #1, table Default-IP-Routing-Table)
+  65001                                                     ! ← 1 AS hop (no prepend to ISP-A)
+    10.1.12.1 from 10.1.12.1 (172.16.1.1)
+      Origin IGP, metric 0, localpref 100, valid, external, best  ! ← ISP-A is shorter path
 ```
 
-Expected: AS-path `65001 65001 65001 65001` (prepended — ISP-B is steered away from this prefix).
-
----
-
-### Task 3 Verification — MED Values
-
-**Step 1: Confirm MED values in advertised routes**
-
-```
-R1# show ip bgp neighbors 10.1.12.2 advertised-routes
-R1# show ip bgp neighbors 10.1.13.2 advertised-routes
-```
-
-The Metric column in the output corresponds to the MED sent to that peer. Both commands should show the MED values assigned in the TE-TO-ISP-A and TE-TO-ISP-B route-maps.
-
-**Step 2: Understand MED comparison scope on R2**
+### Task 4: MED Verification
 
 ```
 R2# show ip bgp 192.168.3.0
+BGP routing table entry for 192.168.3.0/24
+Paths: (1 available, best #1, table Default-IP-Routing-Table)
+  65001
+    10.1.12.1 from 10.1.12.1 (172.16.1.1)
+      Origin IGP, metric 10, localpref 100, valid, external, best  ! ← MED=10, prefer ISP-A entry
+
+R3# show ip bgp 192.168.3.0
+BGP routing table entry for 192.168.3.0/24
+Paths: (1 available, best #1, table Default-IP-Routing-Table)
+  65001
+    10.1.13.1 from 10.1.13.1 (172.16.1.1)
+      Origin IGP, metric 100, localpref 100, valid, external, best  ! ← MED=100, less preferred
 ```
 
-R2 receives 192.168.3.0/24 from both R1 (MED=50, AS-path 65001) and from R3 (MED=50 but arriving via 65003 65001). By default, IOS will not compare MEDs between routes from different neighboring ASes. R2 selects best path based on AS-path length or router-id, not MED, for this cross-AS comparison.
-
-To force MED comparison across different neighboring ASes (for testing purposes only):
+### Task 5: Conditional Default Route
 
 ```
-R2(config)# router bgp 65002
-R2(config-router)# bgp always-compare-med
-```
+R1# show ip bgp neighbors 172.16.4.4 advertised-routes | include 0.0.0.0
+*> 0.0.0.0/0          0.0.0.0                  0         32768 ?  ! ← default being advertised to R4
 
-Note: `bgp always-compare-med` must be consistent across all routers in an AS. Inconsistent configuration causes routing loops.
+R4# show ip bgp
+BGP table version is 8, local router ID is 172.16.4.4
+   Network          Next Hop            Metric LocPrf Weight Path
+*> 0.0.0.0          172.16.1.1               0    100      0 ?   ! ← default received from R1
 
----
-
-### Task 4 Verification — Conditional Default Route
-
-**Step 1: Verify R4 receives the default route**
-
-```
 R4# show ip route 0.0.0.0
-```
-
-Expected:
-
-```
-B*   0.0.0.0/0 [20/0] via 172.16.1.1, 00:XX:XX
-```
-
-The `B*` indicates a BGP-learned default route.
-
-**Step 2: Verify the default is in R1's BGP table**
-
-```
-R1# show ip bgp 0.0.0.0
-```
-
-Expected:
-
-```
-BGP routing table entry for 0.0.0.0/0
-  Paths: (1 available, best #1)
-    Local
-      0.0.0.0 from 0.0.0.0 (172.16.1.1)
-        Origin IGP, metric 0, localpref 100, weight 32768, valid, sourced, local, best
-```
-
-The `weight 32768` confirms this is a locally originated route.
-
-**Step 3: Verify the condition prefix-list**
-
-```
-R1# show ip prefix-list COND-DEFAULT-CHECK
-```
-
-Expected:
-
-```
-ip prefix-list COND-DEFAULT-CHECK: 1 entries
-   seq 10 permit 198.51.100.0/24
-```
-
-**Step 4: Simulate an ISP-A failure and verify default withdrawal**
-
-On R2, temporarily shut the interface toward R1:
-
-```
-R2(config)# interface Fa0/0
-R2(config-if)# shutdown
-```
-
-Wait for the BGP session to drop (hold timer: up to 90 seconds by default), then verify on R1:
-
-```
-R1# show ip bgp 198.51.100.0
-```
-
-Expected: Route is no longer present. Then verify on R4:
-
-```
-R4# show ip route 0.0.0.0
-```
-
-Expected: No default route. R4 correctly has no internet path.
-
-Restore R2 afterward:
-
-```
-R2(config)# interface Fa0/0
-R2(config-if)# no shutdown
+B*   0.0.0.0/0 [200/0] via 172.16.1.1, 00:08:45  ! ← BGP default route installed, iBGP AD=200
 ```
 
 ---
 
 ## 7. Verification Cheatsheet
 
-### Quick Reference Commands
-
-| Goal | Command | Where to Run |
-|---|---|---|
-| BGP table with LP values | `show ip bgp` | R1 |
-| Best path details for a prefix | `show ip bgp <prefix>` | R1, R2, R3 |
-| Routes advertised to a peer | `show ip bgp neighbors <IP> advertised-routes` | R1 |
-| Routes received from a peer | `show ip bgp neighbors <IP> received-routes` | R1 |
-| Route-map match/set details | `show route-map <name>` | R1 |
-| Prefix-list contents | `show ip prefix-list <name>` | R1 |
-| BGP session status | `show ip bgp summary` | All routers |
-| Default route on R4 | `show ip route 0.0.0.0` | R4 |
-| Default route in BGP table | `show ip bgp 0.0.0.0` | R1 |
-| Verify conditional default config | `show ip bgp neighbors 172.16.4.4 \| include default` | R1 |
-| Soft-reset inbound policy | `clear ip bgp <IP> soft in` | R1 |
-| Soft-reset outbound policy | `clear ip bgp <IP> soft out` | R1 |
-| AS-path prepend verification | `show ip bgp <prefix>` | R2, R3 |
-| MED value verification | `show ip bgp neighbors <IP> advertised-routes` | R1 |
-| Community-list contents | `show ip community-list` | R1 |
-
-### Expected LP Values on R1
-
-| Prefix Range | Via | Local Preference | Reason |
-|---|---|---|---|
-| 198.51.100-102.0/24 | ISP-A (R2) | 200 | ISP-A originates these — preferred via ISP-A |
-| 203.0.113-115.0/24 | ISP-B (R3) | 200 | ISP-B originates these — preferred via ISP-B |
-| 198.51.100-102.0/24 | ISP-B (R3) | 150 | ISP-A prefixes arriving via ISP-B — catch-all |
-| 203.0.113-115.0/24 | ISP-A (R2) | 150 | ISP-B prefixes arriving via ISP-A — catch-all |
-| 10.5.1-2.0/24 | Either ISP | 120 | Customer routes (tagged 65003:500) |
-
-### Expected MED and AS-Path on R2 (Advertised by R1)
-
-| Prefix | MED | AS-Path Prepend | Preferred Ingress |
-|---|---|---|---|
-| 192.168.1.0/24 | 10 | None | ISP-A (low MED, short path) |
-| 192.168.2.0/24 | 100 | 65001 65001 65001 | ISP-B (high MED, long path) |
-| 192.168.3.0/24 | 50 | None | Load balanced |
-
-### Troubleshooting One-Liners
+### Local Preference (Outbound TE)
 
 ```
-# LP not changing after route-map applied?
-R1# clear ip bgp 10.1.12.2 soft in
-R1# show ip bgp 198.51.100.0   (check LocPrf column)
-
-# Prepend not visible on R2?
-R1# clear ip bgp 10.1.12.2 soft out
-R2# show ip bgp 192.168.2.0    (check AS-path field)
-
-# MED not appearing in advertised routes?
-R1# show route-map TE-TO-ISP-A (check that set metric sequences exist)
-
-# Default route not on R4?
-R1# show ip bgp 198.51.100.0   (condition must be present)
-R1# show ip bgp neighbors 172.16.4.4 | include default
-R4# show ip bgp summary        (iBGP session must be up)
-
-# Default appearing even when ISP-A is down?
-R1# show ip prefix-list COND-DEFAULT-CHECK  (verify correct prefix: 198.51.100.0/24)
-R1# show ip bgp 198.51.100.0   (must be absent for default to be withdrawn)
+route-map <NAME> permit 10
+ match ip address prefix-list <PL-NAME>
+ set local-preference <value>
+route-map <NAME> permit 20
+neighbor <ip> route-map <NAME> in
 ```
+
+| Command | Purpose |
+|---------|---------|
+| `show ip bgp <prefix>` | Show all paths and LP value for a prefix |
+| `show ip bgp` | Full BGP table — `>` marks best path, `LocPrf` column shows LP |
+| `clear ip bgp <neighbor> soft in` | Reapply inbound policy without resetting session |
+| `show ip bgp neighbors <ip> received-routes` | Routes received from neighbor (requires soft-reconfig) |
+
+> **Exam tip:** Local Preference is an iBGP attribute — it is NOT carried across AS boundaries. It is the #1 tiebreaker after Weight (which is Cisco-proprietary and local only). Higher LP wins.
+
+### AS-Path Prepending (Inbound TE)
+
+```
+route-map <NAME> permit 10
+ match ip address prefix-list <PL-NAME>
+ set as-path prepend <own-ASN> [<own-ASN> ...]
+route-map <NAME> permit 20
+neighbor <ip> route-map <NAME> out
+```
+
+| Command | Purpose |
+|---------|---------|
+| `show ip bgp <prefix>` on ISP router | Verify AS-path length received from enterprise |
+| `show ip bgp neighbors <ip> advertised-routes` | Confirm what R1 is actually sending |
+| `clear ip bgp <neighbor> soft out` | Re-advertise outbound after policy change |
+
+> **Exam tip:** AS-path prepending only influences inbound traffic. Always prepend your OWN AS number. Prepending third-party AS numbers is rejected by many ISPs and considered a misconfiguration.
+
+### MED (Multi-Exit Discriminator)
+
+```
+route-map <NAME> permit 10
+ match ip address prefix-list <PL-NAME>
+ set metric <value>          ! "metric" = MED in BGP context
+route-map <NAME> permit 20
+neighbor <ip> route-map <NAME> out
+```
+
+| Command | Purpose |
+|---------|---------|
+| `show ip bgp <prefix>` | Shows `metric` field — that is the MED value |
+| `show ip bgp neighbors <ip> advertised-routes` | Verify MED is set in outbound advertisement |
+
+> **Exam tip:** MED is only compared when multiple paths arrive from routers in the SAME neighboring AS. Lower MED wins. By default MED is not propagated across AS boundaries (it resets to 0 on eBGP handoff).
+
+### Conditional Default Route Origination
+
+```
+ip prefix-list <SENTINEL> seq 10 permit <upstream-prefix>
+route-map <CHECK> permit 10
+ match ip address prefix-list <SENTINEL>
+neighbor <iBGP-peer> default-originate route-map <CHECK>
+```
+
+| Command | Purpose |
+|---------|---------|
+| `show ip bgp neighbors <ip> advertised-routes` | Verify default is being sent (or not sent) |
+| `show ip bgp` on R4 | Confirm `0.0.0.0/0` appears in BGP table |
+| `show ip route 0.0.0.0` on R4 | Verify default installed in routing table |
+
+> **Exam tip:** `default-originate` without a route-map always sends a default, even if 0.0.0.0/0 is not in the routing table. Adding a `route-map` makes the default conditional on a prefix match in the BGP table.
+
+### BGP Session Management
+
+```
+clear ip bgp <neighbor-ip> soft in    ! Reapply inbound policy
+clear ip bgp <neighbor-ip> soft out   ! Re-advertise outbound
+clear ip bgp * soft                   ! Reset all sessions softly
+```
+
+| Command | What to Look For |
+|---------|-----------------|
+| `show ip bgp summary` | All sessions, state, prefix count |
+| `show ip bgp neighbors <ip>` | Detailed session state and applied policy |
+| `show ip bgp neighbors <ip> advertised-routes` | Outbound RIB for that neighbor |
+| `show ip bgp neighbors <ip> received-routes` | Inbound RIB (requires soft-reconfig inbound) |
+| `show ip bgp regexp <ASN>` | Filter BGP table by AS-path regex |
+| `show ip bgp community <community>` | Filter by community value |
+
+### Common BGP TE Failure Causes
+
+| Symptom | Likely Cause |
+|---------|-------------|
+| LP policy not taking effect | Forgot `clear ip bgp soft in` after adding route-map |
+| AS-path prepend not seen on ISP | Outbound route-map not applied (`neighbor X route-map OUT out`) |
+| MED not visible on ISP router | MED is set correctly but ISP router received it via another eBGP hop (resets to 0) |
+| Conditional default not sent | Sentinel prefix not in BGP table, or route-map sequence order is wrong |
+| R4 not installing default | Next-hop 172.16.1.1 not reachable via OSPF; verify OSPF adjacency |
+
+### Prefix-List Quick Reference
+
+| Syntax | Matches |
+|--------|---------|
+| `permit 198.51.100.0/24` | Exactly 198.51.100.0/24 |
+| `permit 192.168.0.0/16 ge 24 le 24` | Any /24 within 192.168.0.0/16 |
+| `permit 0.0.0.0/0 le 32` | Any prefix (wildcard) |
 
 ---
 
-## 8. Solutions
+## 8. Solutions (Spoiler Alert!)
 
-### Task 1 Solution — Outbound TE via Local Preference
+> Try to complete the lab challenge without looking at these solutions first!
+
+### Task 1: Dual-Homed eBGP Baseline Verification
 
 <details>
-<summary>Task 1 Solution — Outbound TE via Local Preference</summary>
+<summary>Click to view Verification Commands</summary>
 
+```bash
+! Verify both ISP sessions are up
+R1# show ip bgp summary
+
+! Verify dual-path for ISP-A prefix
+R1# show ip bgp 198.51.100.0
+
+! Simulate ISP-A failure
+R1# configure terminal
+R1(config)# interface FastEthernet1/0
+R1(config-if)# shutdown
+
+! Verify failover — prefix must still be reachable via ISP-B
+R1# show ip bgp 198.51.100.0
+! Path should now show only via 10.1.13.2 (ISP-B → R3 → R2 peering)
+
+! Re-enable ISP-A link
+R1(config)# interface FastEthernet1/0
+R1(config-if)# no shutdown
 ```
+
+</details>
+
+---
+
+### Task 2: Per-Prefix Outbound Traffic Engineering
+
+<details>
+<summary>Click to view R1 Configuration</summary>
+
+```bash
+! R1 — Remove lab-06 route-maps and apply per-prefix LP policy
+
+! Prefix-lists for ISP address space
 ip prefix-list ISP-A-PREFIXES seq 10 permit 198.51.100.0/24
 ip prefix-list ISP-A-PREFIXES seq 20 permit 198.51.101.0/24
 ip prefix-list ISP-A-PREFIXES seq 30 permit 198.51.102.0/24
@@ -791,240 +520,197 @@ ip prefix-list ISP-B-PREFIXES seq 10 permit 203.0.113.0/24
 ip prefix-list ISP-B-PREFIXES seq 20 permit 203.0.114.0/24
 ip prefix-list ISP-B-PREFIXES seq 30 permit 203.0.115.0/24
 !
-route-map LP-FROM-ISP-A permit 10
+! Inbound from ISP-A: prefer ISP-A for ISP-A destinations
+route-map ISP-A-IN permit 10
  match ip address prefix-list ISP-A-PREFIXES
  set local-preference 200
 !
-route-map LP-FROM-ISP-A permit 20
- match community CUSTOMER-ROUTES
- set local-preference 120
+route-map ISP-A-IN permit 20
+ set local-preference 100
 !
-route-map LP-FROM-ISP-A permit 30
- set local-preference 150
-!
-route-map LP-FROM-ISP-B permit 10
+! Inbound from ISP-B: prefer ISP-B for ISP-B destinations
+route-map ISP-B-IN permit 10
  match ip address prefix-list ISP-B-PREFIXES
  set local-preference 200
 !
-route-map LP-FROM-ISP-B permit 20
- match community CUSTOMER-ROUTES
- set local-preference 120
-!
-route-map LP-FROM-ISP-B permit 30
- set local-preference 150
+route-map ISP-B-IN permit 20
+ set local-preference 100
 !
 router bgp 65001
  no neighbor 10.1.12.2 route-map SET-LP-200-ISP-A in
+ no neighbor 10.1.12.2 route-map TAG-ISP-A-OUT out
+ no neighbor 10.1.12.2 send-community
+ neighbor 10.1.12.2 route-map ISP-A-IN in
+ !
  no neighbor 10.1.13.2 route-map POLICY-ISP-B-IN in
- neighbor 10.1.12.2 route-map LP-FROM-ISP-A in
- neighbor 10.1.13.2 route-map LP-FROM-ISP-B in
+ no neighbor 10.1.13.2 route-map TAG-AND-PREPEND-ISP-B out
+ no neighbor 10.1.13.2 send-community
+ neighbor 10.1.13.2 route-map ISP-B-IN in
+!
+! Apply — soft reset to activate inbound policy
+clear ip bgp 10.1.12.2 soft in
+clear ip bgp 10.1.13.2 soft in
 ```
 
-After applying:
+</details>
 
-```
-R1# clear ip bgp 10.1.12.2 soft in
-R1# clear ip bgp 10.1.13.2 soft in
-```
+<details>
+<summary>Click to view Verification Commands</summary>
 
-Verify:
-
-```
+```bash
 R1# show ip bgp 198.51.100.0
-  Local preference: 200 (via 10.1.12.2)
+! Expect: localpref 200 on path via 10.1.12.2 (R2), localpref 100 via 10.1.13.2 (R3)
 
 R1# show ip bgp 203.0.113.0
-  Local preference: 200 (via 10.1.13.2)
-
-R1# show ip bgp 10.5.1.0
-  Local preference: 120
+! Expect: localpref 200 on path via 10.1.13.2 (R3), localpref 100 via 10.1.12.2 (R2)
 ```
 
 </details>
 
 ---
 
-### Task 2 Solution — Inbound TE via AS-Path Prepending
+### Task 3: Per-Prefix Inbound Traffic Engineering
 
 <details>
-<summary>Task 2 Solution — Inbound TE via AS-Path Prepending</summary>
+<summary>Click to view R1 Configuration</summary>
 
-```
-ip prefix-list PREFIX-192-168-1 seq 10 permit 192.168.1.0/24
-ip prefix-list PREFIX-192-168-2 seq 10 permit 192.168.2.0/24
-ip prefix-list PREFIX-192-168-3 seq 10 permit 192.168.3.0/24
+```bash
+! R1 — Per-prefix prefix-lists for AS-path prepend control
+ip prefix-list ENTERPRISE-192-168-1 seq 10 permit 192.168.1.0/24
+ip prefix-list ENTERPRISE-192-168-2 seq 10 permit 192.168.2.0/24
 !
-route-map TE-TO-ISP-A permit 10
- match ip address prefix-list PREFIX-192-168-2
+! Outbound to ISP-A: prepend 3x for 192.168.1.0/24
+route-map OUTBOUND-ISP-A permit 10
+ match ip address prefix-list ENTERPRISE-192-168-1
  set as-path prepend 65001 65001 65001
- set metric 100
 !
-route-map TE-TO-ISP-A permit 20
- match ip address prefix-list PREFIX-192-168-1
- set metric 10
- set community 65001:100 additive
+route-map OUTBOUND-ISP-A permit 20
 !
-route-map TE-TO-ISP-A permit 30
- match ip address prefix-list PREFIX-192-168-3
- set metric 50
- set community 65001:100 additive
-!
-route-map TE-TO-ISP-A permit 40
- set community 65001:100 additive
-!
-route-map TE-TO-ISP-B permit 10
- match ip address prefix-list PREFIX-192-168-1
+! Outbound to ISP-B: prepend 3x for 192.168.2.0/24
+route-map OUTBOUND-ISP-B permit 10
+ match ip address prefix-list ENTERPRISE-192-168-2
  set as-path prepend 65001 65001 65001
- set metric 100
 !
-route-map TE-TO-ISP-B permit 20
- match ip address prefix-list PREFIX-192-168-2
- set metric 10
- set community 65001:100 additive
-!
-route-map TE-TO-ISP-B permit 30
- match ip address prefix-list PREFIX-192-168-3
- set metric 50
- set community 65001:100 additive
-!
-route-map TE-TO-ISP-B permit 40
- set community 65001:100 additive
+route-map OUTBOUND-ISP-B permit 20
 !
 router bgp 65001
- no neighbor 10.1.13.2 route-map PREPEND-TO-ISP-B out
- no neighbor 10.1.12.2 route-map SET-COMMUNITY-OUT out
- neighbor 10.1.12.2 route-map TE-TO-ISP-A out
- neighbor 10.1.13.2 route-map TE-TO-ISP-B out
+ neighbor 10.1.12.2 route-map OUTBOUND-ISP-A out
+ neighbor 10.1.13.2 route-map OUTBOUND-ISP-B out
+!
+clear ip bgp 10.1.12.2 soft out
+clear ip bgp 10.1.13.2 soft out
 ```
 
-After applying:
+</details>
 
-```
-R1# clear ip bgp 10.1.12.2 soft out
-R1# clear ip bgp 10.1.13.2 soft out
-```
+<details>
+<summary>Click to view Verification Commands</summary>
 
-Verify:
+```bash
+! On R2 — should see 4 AS hops for 192.168.1.0/24
+R2# show ip bgp 192.168.1.0
+! Expect AS-path: 65001 65001 65001 65001
 
-```
-R1# show ip bgp neighbors 10.1.12.2 advertised-routes
-(192.168.2.0 shows metric 100 and path 65001 65001 65001)
-
-R2# show ip bgp 192.168.2.0
-(AS-path: 65001 65001 65001 65001)
-
+! On R3 — should see 1 AS hop for 192.168.1.0/24 (no prepend)
 R3# show ip bgp 192.168.1.0
-(AS-path: 65001 65001 65001 65001)
+! Expect AS-path: 65001
+
+! On R3 — should see 4 AS hops for 192.168.2.0/24
+R3# show ip bgp 192.168.2.0
+! Expect AS-path: 65001 65001 65001 65001
+
+! On R2 — should see 1 AS hop for 192.168.2.0/24
+R2# show ip bgp 192.168.2.0
+! Expect AS-path: 65001
 ```
 
 </details>
 
 ---
 
-### Task 3 Solution — MED for Inbound Traffic Hints
+### Task 4: MED-Based Preferred Entry Signaling
 
 <details>
-<summary>Task 3 Solution — MED for Inbound Traffic Hints</summary>
+<summary>Click to view R1 Configuration</summary>
 
-Task 3 requires no additional configuration beyond what was applied in Task 2. The `set metric` commands in TE-TO-ISP-A and TE-TO-ISP-B embed MED values into the advertised routes.
-
-Verify:
-
-```
-R1# show ip bgp neighbors 10.1.12.2 advertised-routes
-```
-
-Expected output (Metric column = MED value):
-
-```
-Network          Next Hop         Metric  LocPrf  Weight  Path
-*> 192.168.1.0   0.0.0.0              10                  32768 i
-*> 192.168.2.0   0.0.0.0             100                  32768 65001 65001 65001 i
-*> 192.168.3.0   0.0.0.0              50                  32768 i
-```
-
-```
-R1# show ip bgp neighbors 10.1.13.2 advertised-routes
-```
-
-Expected:
-
-```
-Network          Next Hop         Metric  LocPrf  Weight  Path
-*> 192.168.1.0   0.0.0.0             100                  32768 65001 65001 65001 i
-*> 192.168.2.0   0.0.0.0              10                  32768 i
-*> 192.168.3.0   0.0.0.0              50                  32768 i
+```bash
+! R1 — Add MED to outbound route-maps
+ip prefix-list ENTERPRISE-192-168-3 seq 10 permit 192.168.3.0/24
+!
+! Extend OUTBOUND-ISP-A: set MED 10 for 192.168.3.0/24
+! (Add before the existing permit 20 catch-all)
+no route-map OUTBOUND-ISP-A permit 20
+!
+route-map OUTBOUND-ISP-A permit 20
+ match ip address prefix-list ENTERPRISE-192-168-3
+ set metric 10
+!
+route-map OUTBOUND-ISP-A permit 30
+!
+! Extend OUTBOUND-ISP-B: set MED 100 for 192.168.3.0/24
+no route-map OUTBOUND-ISP-B permit 20
+!
+route-map OUTBOUND-ISP-B permit 20
+ match ip address prefix-list ENTERPRISE-192-168-3
+ set metric 100
+!
+route-map OUTBOUND-ISP-B permit 30
+!
+clear ip bgp 10.1.12.2 soft out
+clear ip bgp 10.1.13.2 soft out
 ```
 
-Key concepts to understand:
-- MED is honored only by the directly connected ISP (the AS that receives the advertisement).
-- MED is only compared between routes received from the same neighboring AS unless `bgp always-compare-med` is enabled.
-- AS-path prepending propagates the length change to all ASes globally.
-- For inbound TE that must work beyond the directly connected ISP, prepending is the correct and only portable mechanism.
+</details>
+
+<details>
+<summary>Click to view Verification Commands</summary>
+
+```bash
+! On R2 — verify MED=10 for 192.168.3.0/24
+R2# show ip bgp 192.168.3.0
+! Expect: metric 10
+
+! On R3 — verify MED=100 for 192.168.3.0/24
+R3# show ip bgp 192.168.3.0
+! Expect: metric 100
+```
 
 </details>
 
 ---
 
-### Task 4 Solution — Conditional Default Route Origination
+### Task 5: Conditional Default Route Origination
 
 <details>
-<summary>Task 4 Solution — Conditional Default Route Origination</summary>
+<summary>Click to view R1 Configuration</summary>
 
-```
-ip route 0.0.0.0 0.0.0.0 Null0
+```bash
+! R1 — Conditional default route to R4
+ip prefix-list ISP-A-REACHABILITY seq 10 permit 198.51.100.0/24
 !
-ip prefix-list COND-DEFAULT-CHECK seq 10 permit 198.51.100.0/24
-!
-route-map COND-DEFAULT permit 10
- match ip address prefix-list COND-DEFAULT-CHECK
+route-map CHECK-ISP-UP permit 10
+ match ip address prefix-list ISP-A-REACHABILITY
 !
 router bgp 65001
- neighbor 172.16.4.4 default-originate route-map COND-DEFAULT
+ neighbor 172.16.4.4 default-originate route-map CHECK-ISP-UP
 ```
 
-After applying:
+</details>
 
-```
-R1# clear ip bgp 172.16.4.4 soft out
-```
+<details>
+<summary>Click to view Verification Commands</summary>
 
-Verify default route advertised to R4:
+```bash
+! On R1 — verify default being sent to R4
+R1# show ip bgp neighbors 172.16.4.4 advertised-routes
+! Expect: 0.0.0.0/0 in the output
 
-```
-R4# show ip route 0.0.0.0
-B*   0.0.0.0/0 [20/0] via 172.16.1.1, 00:00:XX
-```
-
-Verify condition check on R1:
-
-```
-R1# show ip bgp neighbors 172.16.4.4 | include default
-  Default information originate, default sent
-```
-
-Failure simulation (ISP-A down):
-
-```
-R2(config)# interface Fa0/0
-R2(config-if)# shutdown
-```
-
-Wait for session to drop, then:
-
-```
-R1# show ip bgp 198.51.100.0
-(route absent — condition fails)
+! On R4 — verify default received and installed
+R4# show ip bgp
+! Expect: *> 0.0.0.0   172.16.1.1   ...
 
 R4# show ip route 0.0.0.0
-(no output — default withdrawn)
-```
-
-Restore:
-
-```
-R2(config)# interface Fa0/0
-R2(config-if)# no shutdown
+! Expect: B* 0.0.0.0/0 [200/0] via 172.16.1.1
 ```
 
 </details>
@@ -1033,267 +719,207 @@ R2(config-if)# no shutdown
 
 ## 9. Troubleshooting Scenarios
 
-### Ticket 1
+Each ticket simulates a real-world fault. Inject the fault first, then diagnose and fix using only show commands.
 
-**Problem:** R4 is not receiving a default route from R1. The `show ip route 0.0.0.0` command on R4 returns no output. The iBGP session between R1 and R4 is confirmed Established. ISP-A (R2) is up and the BGP session R1-R2 is in the Established state.
+### Workflow
 
-**Your Mission:** Diagnose why the default route is not propagating to R4 and restore the expected behavior.
-
-**Symptoms:**
-
-```
-R4# show ip route 0.0.0.0
-(no output)
-
-R4# show ip bgp summary
-Neighbor        V    AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd
-172.16.1.1      4 65001      XX      XX        X    0    0  HH:MM:SS       8
-(session is up, R4 is receiving 8 prefixes but no default)
-
-R1# show ip bgp neighbors 172.16.4.4 | include default
-  Default information originate, default not sent
+```bash
+python3 setup_lab.py                                   # reset to known-good (solution state)
+python3 scripts/fault-injection/inject_scenario_01.py  # Ticket 1
+python3 scripts/fault-injection/apply_solution.py      # restore to solution state
 ```
 
-**Diagnostic Hint:** Check three things in order:
-1. Is the static null route present?
-2. Is the condition prefix (198.51.100.0/24) actually in R1's BGP table?
-3. Does the prefix-list COND-DEFAULT-CHECK reference the correct prefix?
+---
+
+### Ticket 1 — R4 Has No Default Route Despite Active ISP Sessions
+
+You receive a ticket from the network operations center: "R4 cannot reach internet prefixes. Both ISP sessions show as Established on R1, but R4 has no route to the internet."
+
+**Inject:** `python3 scripts/fault-injection/inject_scenario_01.py`
+
+**Success criteria:** R4's routing table contains `B* 0.0.0.0/0 [200/0] via 172.16.1.1` and can reach ISP prefixes via the default.
 
 <details>
-<summary>Solution</summary>
+<summary>Click to view Diagnosis Steps</summary>
 
-**Root Cause:**
+```bash
+! Step 1: Confirm ISP sessions are up on R1
+R1# show ip bgp summary
+! Both 10.1.12.2 and 10.1.13.2 should be Established
 
-The `ip prefix-list COND-DEFAULT-CHECK` references `198.51.200.0/24` instead of `198.51.100.0/24`. The condition never evaluates to true because the wrong prefix is being checked, so the default route is never sent to R4.
+! Step 2: Check if R1 is generating a default to R4
+R1# show ip bgp neighbors 172.16.4.4 advertised-routes
+! Is 0.0.0.0/0 in the output? If not, the condition is not met.
 
-**Diagnosis:**
+! Step 3: Check the conditional route-map on R1
+R1# show route-map CHECK-ISP-UP
+! Look at the match clause — which prefix-list is it matching?
 
+! Step 4: Verify what prefix-list SENTINEL-PREFIX contains
+R1# show ip prefix-list
+! The sentinel prefix-list should match 198.51.100.0/24 (an ISP-A prefix in the BGP table)
+! If it matches a non-existent prefix, the condition will never be true
+
+! Step 5: Verify the sentinel prefix IS in the BGP table
+R1# show ip bgp 198.51.100.0
+! If this shows a valid path, the prefix exists — but the sentinel prefix-list is wrong
 ```
-R1# show ip prefix-list COND-DEFAULT-CHECK
-ip prefix-list COND-DEFAULT-CHECK: 1 entries
-   seq 10 permit 198.51.200.0/24
 
-R1# show ip bgp 198.51.200.0
-(no entry — this prefix does not exist in the BGP table)
-```
+**Root cause:** The `CHECK-ISP-UP` route-map references a prefix-list that matches a non-existent prefix (e.g., 198.51.110.0/24 instead of 198.51.100.0/24). The condition never evaluates to true so R1 never sends the default to R4.
 
-The BGP process evaluates the route-map COND-DEFAULT against the BGP table. Because 198.51.200.0/24 is absent, the route-map returns no match, and `default-originate` does not generate an advertisement.
+</details>
 
-**Fix:**
+<details>
+<summary>Click to view Fix</summary>
 
-```
-R1(config)# no ip prefix-list COND-DEFAULT-CHECK seq 10
-R1(config)# ip prefix-list COND-DEFAULT-CHECK seq 10 permit 198.51.100.0/24
+```bash
+! On R1 — Fix the sentinel prefix-list to match the correct ISP-A prefix
+R1# configure terminal
+R1(config)# no ip prefix-list ISP-A-REACHABILITY
+R1(config)# ip prefix-list ISP-A-REACHABILITY seq 10 permit 198.51.100.0/24
 R1(config)# end
+
+! Trigger BGP to re-evaluate the conditional
 R1# clear ip bgp 172.16.4.4 soft out
-```
 
-**Verify:**
-
-```
-R1# show ip prefix-list COND-DEFAULT-CHECK
-   seq 10 permit 198.51.100.0/24
-
-R1# show ip bgp neighbors 172.16.4.4 | include default
-  Default information originate, default sent
-
+! Verify on R4
+R4# show ip bgp
+! Expect: *> 0.0.0.0   172.16.1.1
 R4# show ip route 0.0.0.0
-B*   0.0.0.0/0 [20/0] via 172.16.1.1, 00:00:XX
+! Expect: B* 0.0.0.0/0 [200/0] via 172.16.1.1
 ```
-
-**Key Lesson:** Always verify prefix-list contents character by character against the actual BGP table when conditional features (`default-originate route-map`, `advertise-map`) are not behaving as expected. A single wrong octet causes the condition to silently fail with no error message.
 
 </details>
 
 ---
 
-### Ticket 2
+### Ticket 2 — Inbound Traffic for 192.168.2.0/24 Arrives via ISP-B Instead of ISP-A
 
-**Problem:** MED values appear correct in `show ip bgp neighbors <IP> advertised-routes` on R1, confirming that 192.168.3.0/24 is being advertised with MED=50 to both ISP-A and ISP-B. However, when looking at R2's BGP table, R2 consistently prefers the path it received via R3 (65002 65003 65001) over the direct path from R1 (65001) for 192.168.3.0/24 — even though the direct path from R1 has a shorter AS-path. The operations team suspects MED is the culprit but is not sure why.
+A monitoring tool reports that traffic from internet hosts to 192.168.2.0/24 is arriving via the ISP-B (R3) link instead of the expected ISP-A (R2) link. The TE policy should be directing this prefix's inbound traffic through ISP-A.
 
-**Your Mission:** Explain and fix the path selection issue so R2 prefers its direct eBGP path from R1 for 192.168.3.0/24.
+**Inject:** `python3 scripts/fault-injection/inject_scenario_02.py`
 
-**Symptoms:**
-
-```
-R2# show ip bgp 192.168.3.0
-BGP routing table entry for 192.168.3.0/24
-  Paths: (2 available, best #2)
-    65003 65001
-      10.1.23.2 from 10.1.23.2 (172.16.3.3)
-        Origin IGP, metric 50, localpref 100, valid, external
-        (this is the longer AS-path — via R3 — but R2 has selected it as best???)
-  * 65001
-      10.1.12.1 from 10.1.12.1 (172.16.1.1)
-        Origin IGP, metric 50, localpref 100, valid, external, best
-```
-
-Wait — reread the symptom. R2 has the direct path as best. The issue is that R2 is not using the MED to discriminate and the operations team cannot explain why the MED=50 from R1 is not being respected over the MED=50 from R3 (same value, different AS).
-
-Actually the real fault scenario: R1's TE-TO-ISP-A route-map sequences are inverted — the `set metric` for 192.168.3.0/24 is at sequence 50, but a catch-all `permit` without a set metric was added at sequence 40, causing 192.168.3.0/24 to match the catch-all first and be advertised with no MED (MED=0), making it look identical to R3's advertisement of the same prefix (also MED=0). R2 has no tiebreaker and uses router-id — which may or may not favor R1.
-
-**Symptoms:**
-
-```
-R1# show ip bgp neighbors 10.1.12.2 advertised-routes
-Network          Next Hop         Metric  LocPrf  Weight  Path
-*> 192.168.3.0   0.0.0.0               0                  32768 i
-(MED is 0 — the set metric 50 did not fire)
-
-R1# show route-map TE-TO-ISP-A
-route-map TE-TO-ISP-A, permit, sequence 30
-  Match clauses:
-    ip address prefix-lists: PREFIX-192-168-2
-  Set clauses:
-    as-path prepend 65001 65001 65001
-    metric 100
-route-map TE-TO-ISP-A, permit, sequence 40
-  Match clauses:
-  Set clauses:
-    community 65001:100 additive
-route-map TE-TO-ISP-A, permit, sequence 50
-  Match clauses:
-    ip address prefix-lists: PREFIX-192-168-3
-  Set clauses:
-    metric 50
-    community 65001:100 additive
-```
-
-The catch-all at sequence 40 has no match clause — it permits all prefixes. Sequence 50 is never reached.
+**Success criteria:** `show ip bgp 192.168.2.0` on R2 shows AS-path `65001` (1 hop, no prepend) and on R3 shows AS-path `65001 65001 65001 65001` (4 hops, prepended). Internet routers prefer the shorter R2/ISP-A path for 192.168.2.0/24.
 
 <details>
-<summary>Solution</summary>
+<summary>Click to view Diagnosis Steps</summary>
 
-**Root Cause:**
+```bash
+! Step 1: Check what R2 sees for 192.168.2.0/24
+R2# show ip bgp 192.168.2.0
+! If AS-path is 65001 65001 65001 65001 (4 hops), the prepend is being applied toward ISP-A
+! It should have AS-path 65001 (1 hop) — prepend is on the WRONG outbound route-map
 
-The route-map TE-TO-ISP-A has a sequence ordering error. The catch-all `permit` statement at sequence 40 has no `match` clause, so it matches every prefix and fires before the PREFIX-192-168-3 match at sequence 50. The `set metric 50` for 192.168.3.0/24 never executes. 192.168.3.0/24 is advertised with MED=0 (unset) instead of MED=50.
+! Step 2: Check what R3 sees for 192.168.2.0/24
+R3# show ip bgp 192.168.2.0
+! If AS-path is 65001 (1 hop), ISP-B has the shorter path — wrong direction
 
-The same error likely exists in TE-TO-ISP-B at the corresponding sequences.
+! Step 3: On R1, verify what is being advertised to each ISP
+R1# show ip bgp neighbors 10.1.12.2 advertised-routes | include 192.168.2.0
+! Shows what R1 is sending to R2 (ISP-A)
 
-**Diagnosis:**
+R1# show ip bgp neighbors 10.1.13.2 advertised-routes | include 192.168.2.0
+! Shows what R1 is sending to R3 (ISP-B)
 
+! Step 4: Inspect the outbound route-maps on R1
+R1# show route-map OUTBOUND-ISP-A
+R1# show route-map OUTBOUND-ISP-B
+! The 192.168.2.0/24 prefix-list match and as-path prepend should be in OUTBOUND-ISP-B
+! If it is in OUTBOUND-ISP-A instead, that is the fault
 ```
-R1# show route-map TE-TO-ISP-A
-(sequence 40 fires for 192.168.3.0 before sequence 50 can be reached)
 
-R1# show ip bgp neighbors 10.1.12.2 advertised-routes
-(192.168.3.0/24 shows metric 0)
-```
+**Root cause:** The AS-path prepend for 192.168.2.0/24 is configured in `OUTBOUND-ISP-A` (applied toward ISP-A) instead of `OUTBOUND-ISP-B` (toward ISP-B). This makes ISP-A see the longer path, causing inbound traffic for 192.168.2.0/24 to enter via ISP-B — the opposite of the intended policy.
 
-**Fix:**
+</details>
 
-Remove the misplaced sequence 40 and sequence 50, recreate them in correct order so the PREFIX-192-168-3 match comes before the catch-all:
+<details>
+<summary>Click to view Fix</summary>
 
-```
-R1(config)# no route-map TE-TO-ISP-A permit 40
-R1(config)# no route-map TE-TO-ISP-A permit 50
-R1(config)# route-map TE-TO-ISP-A permit 30
-R1(config-route-map)# match ip address prefix-list PREFIX-192-168-3
-R1(config-route-map)# set metric 50
-R1(config-route-map)# set community 65001:100 additive
+```bash
+! On R1 — Remove prepend from OUTBOUND-ISP-A and add to OUTBOUND-ISP-B
+R1# configure terminal
+!
+! Remove 192.168.2.0/24 prepend from OUTBOUND-ISP-A (it does not belong here)
+R1(config)# no route-map OUTBOUND-ISP-A permit 10
+R1(config)# route-map OUTBOUND-ISP-A permit 10
+R1(config-route-map)# match ip address prefix-list ENTERPRISE-192-168-1
+R1(config-route-map)# set as-path prepend 65001 65001 65001
 R1(config-route-map)# exit
-R1(config)# route-map TE-TO-ISP-A permit 40
-R1(config-route-map)# set community 65001:100 additive
+!
+! Ensure OUTBOUND-ISP-B has 192.168.2.0/24 prepend
+R1(config)# route-map OUTBOUND-ISP-B permit 10
+R1(config-route-map)# match ip address prefix-list ENTERPRISE-192-168-2
+R1(config-route-map)# set as-path prepend 65001 65001 65001
 R1(config-route-map)# exit
 R1(config)# end
-R1# clear ip bgp 10.1.12.2 soft out
+!
+clear ip bgp 10.1.12.2 soft out
+clear ip bgp 10.1.13.2 soft out
+
+! Verify on R2 — should show AS-path 65001 (1 hop)
+R2# show ip bgp 192.168.2.0
+! Verify on R3 — should show AS-path 65001 65001 65001 65001 (4 hops)
+R3# show ip bgp 192.168.2.0
 ```
-
-Apply the same fix to TE-TO-ISP-B.
-
-**Verify:**
-
-```
-R1# show ip bgp neighbors 10.1.12.2 advertised-routes
-Network          Next Hop         Metric  LocPrf  Weight  Path
-*> 192.168.3.0   0.0.0.0              50                  32768 i
-(MED=50 now correctly set)
-```
-
-**Key Lesson:** In route-maps, sequence numbers determine evaluation order. A `permit` sequence with no `match` clause is a catch-all that matches every prefix. Always place specific matches at lower sequence numbers and catch-alls at the highest sequence number in the route-map. When debugging, `show route-map` is essential — pay attention to match clause counts to understand which sequences are firing.
 
 </details>
 
 ---
 
-### Ticket 3
+### Ticket 3 — All Outbound Traffic Is Taking the ISP-B Path Regardless of Destination
 
-**Problem:** 192.168.1.0/24 is still being preferred via ISP-B (R3) even after AS-path prepending was configured to steer traffic toward ISP-A. The network operations team confirms that R3's BGP table shows the correct prepended AS-path for 192.168.1.0/24 (`65001 65001 65001 65001`). The R1-R3 session has been soft-reset. However, R3 still shows 192.168.1.0/24 as reachable (which is expected — R3 should still have the route, just with a longer path), and ISP-B customers are still reaching 192.168.1.0/24 via R3.
+Operations reports that traffic from R4 to both ISP-A prefixes (198.51.100.x) and ISP-B prefixes (203.0.113.x) is exiting via ISP-B. The outbound TE policy should prefer ISP-A for ISP-A prefixes.
 
-The engineer suspects the prepend is configured but something prevents the longer AS-path from being the deciding factor for R3's own traffic.
+**Inject:** `python3 scripts/fault-injection/inject_scenario_03.py`
 
-**Symptoms:**
-
-```
-R3# show ip bgp 192.168.1.0
-BGP routing table entry for 192.168.1.0/24
-  Paths: (2 available, best #1)
-  * 65001 65001 65001 65001
-      10.1.13.1 from 10.1.13.1 (172.16.1.1)
-        Origin IGP, metric 100, localpref 100, valid, external, best
-    65002 65001
-      10.1.23.1 from 10.1.23.1 (172.16.2.2)
-        Origin IGP, metric 0, localpref 100, valid, external
-```
-
-R3 is selecting the 4-hop prepended path as best instead of the 2-hop path via R2. This is the opposite of the expected behavior — the shorter AS-path via R2 should be preferred.
-
-**Your Mission:** Diagnose why R3 prefers the longer AS-path and restore the correct behavior where the 2-hop path via R2 is best.
+**Success criteria:** `show ip bgp 198.51.100.0` on R1 shows `localpref 200` on the path via R2 (10.1.12.2) and `localpref 100` on the path via R3 (10.1.13.2). The `>` best-path marker is on the R2 path.
 
 <details>
-<summary>Solution</summary>
+<summary>Click to view Diagnosis Steps</summary>
 
-**Root Cause:**
+```bash
+! Step 1: Check LP values on R1 for an ISP-A prefix
+R1# show ip bgp 198.51.100.0
+! If localpref is 50 (or lower than 100) on the R2 path, the inbound policy is inverted
 
-The TE-TO-ISP-B route-map on R1 has the `set metric 100` applied to 192.168.1.0/24 (which is correct — high MED discourages ISP-B from preferring this path). However, the route arriving via R2 (which traveled 65002 65001) also carries a MED. The issue is a local-preference override: R3 has an inbound route-map from R1 that sets local-preference based on some criteria, and that route-map is inadvertently assigning LP=200 to the path from R1 directly, which overrides the AS-path length comparison. LP is compared before AS-path length in BGP path selection order.
+! Step 2: Check LP values for an ISP-B prefix
+R1# show ip bgp 203.0.113.0
+! ISP-B path should show localpref 200 (correct if ISP-B-IN is OK)
+! If ISP-A path is lower than ISP-B path for ALL prefixes, ISP-A-IN is misconfigured
 
-Alternatively, a more common root cause in this topology: R3 has `bgp always-compare-med` configured, and because MED=100 from R1 is higher than MED=0 from R2 (via the R2-R3 link), R3 considers the R2 path "worse" when comparing MEDs. Wait — higher MED = less preferred. So MED=100 from R1 should make R1's path less preferred to R3. The R2 path (MED=0, lower) should be better.
+! Step 3: Inspect the ISP-A-IN route-map
+R1# show route-map ISP-A-IN
+! Look at the set local-preference values
+! Seq 10 (matching ISP-A-PREFIXES) should set LP 200
+! If it is setting LP 50 (or anything lower than 100), that is the fault
 
-Actual root cause for this ticket: On R3, there is an inbound route-map applied to the neighbor 10.1.13.1 (R1) that sets `local-preference 200` on all routes, regardless of prefix. This LP=200 from R1's direct advertisement to R3 overrides the AS-path length comparison — R3 prefers LP=200 over LP=100 (default from R2). The long prepend is irrelevant because LP is evaluated first.
-
-**Diagnosis:**
-
-```
-R3# show ip bgp 192.168.1.0
-  (best path via 10.1.13.1 shows localpref 200)
-  (path via 10.1.23.1 shows localpref 100)
-
-R3# show route-map
-(look for an inbound route-map on neighbor 10.1.13.1 that sets LP)
-
-R3# show ip bgp neighbors 10.1.13.1 | include route-map
-  Inbound  route-map is SET-LP-200-FROM-R1
-```
-
-A route-map `SET-LP-200-FROM-R1` is assigning LP=200 to all routes received from R1. This was left over from a previous configuration or added in error.
-
-**Fix:**
-
-Remove the inbound route-map on R3 for the neighbor toward R1:
-
-```
-R3(config)# router bgp 65003
-R3(config-router)# no neighbor 10.1.13.1 route-map SET-LP-200-FROM-R1 in
-R3(config-router)# end
-R3# clear ip bgp 10.1.13.1 soft in
+! Step 4: Check received routes from ISP-A with LP
+R1# show ip bgp neighbors 10.1.12.2 received-routes | include 198.51
+! Verify the routes are arriving and being policy-matched
 ```
 
-**Verify:**
+**Root cause:** The `ISP-A-IN` route-map has Local Preference set to 50 for ISP-A prefixes. This makes the ISP-A path LESS preferred than the default LP (100) that ISP-B paths receive, causing all ISP-A-origin traffic to route through ISP-B instead.
 
+</details>
+
+<details>
+<summary>Click to view Fix</summary>
+
+```bash
+! On R1 — Correct the LP value in ISP-A-IN
+R1# configure terminal
+R1(config)# route-map ISP-A-IN permit 10
+R1(config-route-map)# set local-preference 200
+R1(config-route-map)# end
+!
+! Reapply inbound policy
+R1# clear ip bgp 10.1.12.2 soft in
+
+! Verify
+R1# show ip bgp 198.51.100.0
+! Expect: localpref 200 on path via 10.1.12.2, localpref 100 via 10.1.13.2
+! The > symbol must be on the 10.1.12.2 path
 ```
-R3# show ip bgp 192.168.1.0
-  Paths: (2 available, best #2)
-    65001 65001 65001 65001
-      10.1.13.1 from 10.1.13.1 (172.16.1.1)
-        localpref 100, valid, external
-  * 65002 65001
-      10.1.23.1 from 10.1.23.1 (172.16.2.2)
-        localpref 100, valid, external, best
-```
-
-R3 now prefers the 2-hop path via R2 (65002 65001) because both paths have the same LP, and AS-path length is the next tiebreaker.
-
-**Key Lesson:** BGP path selection order matters. Local Preference is evaluated before AS-path length. If an unexpected LP value is on one path, the shorter AS-path will never win the comparison. When AS-path prepending appears to be ignored, always check LP values first — look at `show ip bgp <prefix>` on the receiving router and compare the LocPrf column across all available paths.
 
 </details>
 
@@ -1301,19 +927,24 @@ R3 now prefers the 2-hop path via R2 (65002 65001) because both paths have the s
 
 ## 10. Lab Completion Checklist
 
-Work through this checklist after completing all four tasks. Every item must be verifiable with a show command.
+### Core Implementation
 
-- [ ] `LP-FROM-ISP-A` route-map exists on R1 with three sequences (LP 200, LP 120, LP 150)
-- [ ] `LP-FROM-ISP-B` route-map exists on R1 with three sequences (LP 200, LP 120, LP 150)
-- [ ] R1 `show ip bgp` shows ISP-A prefixes (198.51.x.x) with LP=200 via 10.1.12.2
-- [ ] R1 `show ip bgp` shows ISP-B prefixes (203.0.x.x) with LP=200 via 10.1.13.2
-- [ ] R1 `show ip bgp` shows customer routes (10.5.x.x) with LP=120
-- [ ] `TE-TO-ISP-A` route-map exists on R1 and is applied outbound to R2 (10.1.12.2)
-- [ ] `TE-TO-ISP-B` route-map exists on R1 and is applied outbound to R3 (10.1.13.2)
-- [ ] R2 `show ip bgp 192.168.2.0` shows AS-path with four occurrences of 65001 (3x prepend)
-- [ ] R3 `show ip bgp 192.168.1.0` shows AS-path with four occurrences of 65001 (3x prepend)
-- [ ] R1 `show ip bgp neighbors 10.1.12.2 advertised-routes` shows MED=10 for 192.168.1.0/24
-- [ ] `ip route 0.0.0.0 0.0.0.0 Null0` is present in R1's running config
-- [ ] `ip prefix-list COND-DEFAULT-CHECK` matches 198.51.100.0/24 (not any other prefix)
-- [ ] R4 `show ip route 0.0.0.0` shows a BGP-learned default route via 172.16.1.1
-- [ ] After simulating ISP-A failure (shut R2 Fa0/0), R4 loses the default route within 90 seconds
+- [ ] Both ISP eBGP sessions show as Established in `show ip bgp summary`
+- [ ] iBGP session R1–R4 is Established
+- [ ] Failover test: ISP-A link shutdown → 198.51.100.0/24 still reachable via ISP-B path
+- [ ] `show ip bgp 198.51.100.0` on R1 shows LP=200 on R2 path, LP=100 on R3 path
+- [ ] `show ip bgp 203.0.113.0` on R1 shows LP=200 on R3 path, LP=100 on R2 path
+- [ ] `show ip bgp 192.168.1.0` on R2 shows AS-path `65001 65001 65001 65001` (4 hops)
+- [ ] `show ip bgp 192.168.1.0` on R3 shows AS-path `65001` (1 hop)
+- [ ] `show ip bgp 192.168.2.0` on R3 shows AS-path `65001 65001 65001 65001` (4 hops)
+- [ ] `show ip bgp 192.168.2.0` on R2 shows AS-path `65001` (1 hop)
+- [ ] `show ip bgp 192.168.3.0` on R2 shows `metric 10`
+- [ ] `show ip bgp 192.168.3.0` on R3 shows `metric 100`
+- [ ] `show ip bgp` on R4 shows `0.0.0.0/0` with next-hop 172.16.1.1
+- [ ] `show ip route 0.0.0.0` on R4 shows `B* 0.0.0.0/0 [200/0] via 172.16.1.1`
+
+### Troubleshooting
+
+- [ ] Ticket 1: Identified sentinel prefix-list mismatch as root cause; restored default route to R4
+- [ ] Ticket 2: Identified reversed AS-path prepend direction; corrected OUTBOUND-ISP-A and OUTBOUND-ISP-B
+- [ ] Ticket 3: Identified inverted LP value (50 instead of 200) in ISP-A-IN; corrected and verified
