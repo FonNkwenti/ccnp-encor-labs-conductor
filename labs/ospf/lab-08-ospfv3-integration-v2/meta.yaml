@@ -1,0 +1,28 @@
+# Auto-generated — do not edit manually. Use /tag-lab to stamp external agent runs.
+lab: lab-08-ospfv3-integration-v2
+chapter: ospf
+created:
+  date: "2026-03-01"
+  agent: claude-sonnet-4-6
+  skill: create-lab
+  skill_version: "2026-03-01"
+  files:
+    - workbook.md
+    - topology.drawio
+    - setup_lab.py
+    - challenges.md
+    - meta.yaml
+    - initial-configs/R1.cfg
+    - initial-configs/R2.cfg
+    - initial-configs/R3.cfg
+    - initial-configs/R6.cfg
+    - solutions/R1.cfg
+    - solutions/R2.cfg
+    - solutions/R3.cfg
+    - solutions/R6.cfg
+    - scripts/fault-injection/inject_scenario_01.py
+    - scripts/fault-injection/inject_scenario_02.py
+    - scripts/fault-injection/inject_scenario_03.py
+    - scripts/fault-injection/apply_solution.py
+    - scripts/fault-injection/README.md
+updated: []
