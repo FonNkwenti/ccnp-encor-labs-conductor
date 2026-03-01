@@ -1,0 +1,206 @@
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- ============================================================ -->
+    <!-- TITLE                                                        -->
+    <!-- ============================================================ -->
+    <mxCell id="title" value="Lab 06: NSSA &amp; Route Control" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1" vertex="1" parent="1">
+      <mxGeometry x="200" y="30" width="620" height="40" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- ZONE ELLIPSES — placed FIRST so they render behind devices  -->
+    <!-- ============================================================ -->
+
+    <!-- Area 0 (Backbone) — blue — encloses R1, R2, R3 and backbone links -->
+    <mxCell id="area0_shape" value="Area 0&#xa;(Backbone)"
+      style="ellipse;whiteSpace=wrap;html=1;dashed=1;strokeColor=#1565C0;strokeWidth=2;fillColor=#1a3a5c;opacity=35;fontSize=12;fontStyle=1;verticalAlign=top;fontColor=#ffffff;"
+      vertex="1" parent="1">
+      <mxGeometry x="100" y="80" width="590" height="380" as="geometry" />
+    </mxCell>
+
+    <!-- Area 14 (NSSA) — purple — encloses R1-R4 link -->
+    <mxCell id="area14_shape" value="Area 14&#xa;(NSSA)"
+      style="ellipse;whiteSpace=wrap;html=1;dashed=1;strokeColor=#6A1B9A;strokeWidth=2;fillColor=#2e0d40;opacity=35;fontSize=12;fontStyle=1;verticalAlign=top;fontColor=#ffffff;"
+      vertex="1" parent="1">
+      <mxGeometry x="500" y="75" width="340" height="175" as="geometry" />
+    </mxCell>
+
+    <!-- Area 1 (Normal) — green — encloses R2-R3 link -->
+    <mxCell id="area1_shape" value="Area 1&#xa;(Normal)"
+      style="ellipse;whiteSpace=wrap;html=1;dashed=1;strokeColor=#2E7D32;strokeWidth=2;fillColor=#1b3d27;opacity=35;fontSize=12;fontStyle=1;verticalAlign=bottom;fontColor=#ffffff;"
+      vertex="1" parent="1">
+      <mxGeometry x="140" y="360" width="540" height="150" as="geometry" />
+    </mxCell>
+
+    <!-- Area 2 (Totally Stubby) — orange — encloses R3-R7 link -->
+    <mxCell id="area2_shape" value="Area 2&#xa;(Totally Stubby)"
+      style="ellipse;whiteSpace=wrap;html=1;dashed=1;strokeColor=#E65100;strokeWidth=2;fillColor=#4a1e00;opacity=35;fontSize=12;fontStyle=1;verticalAlign=top;fontColor=#ffffff;"
+      vertex="1" parent="1">
+      <mxGeometry x="590" y="355" width="360" height="160" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- DEVICE ICONS                                                 -->
+    <!-- ============================================================ -->
+
+    <!-- R1: Hub/ABR — top center -->
+    <mxCell id="R1" value="" style="shape=mxgraph.cisco.routers.router;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;" vertex="1" parent="1">
+      <mxGeometry x="490" y="140" width="78" height="53" as="geometry" />
+    </mxCell>
+
+    <!-- R4: NSSA Router/ASBR — top right -->
+    <mxCell id="R4" value="" style="shape=mxgraph.cisco.routers.router;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;" vertex="1" parent="1">
+      <mxGeometry x="760" y="140" width="78" height="53" as="geometry" />
+    </mxCell>
+
+    <!-- R2: Backbone Router — bottom left -->
+    <mxCell id="R2" value="" style="shape=mxgraph.cisco.routers.router;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;" vertex="1" parent="1">
+      <mxGeometry x="200" y="400" width="78" height="53" as="geometry" />
+    </mxCell>
+
+    <!-- R3: Branch Router/ABR — bottom center-right -->
+    <mxCell id="R3" value="" style="shape=mxgraph.cisco.routers.router;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;" vertex="1" parent="1">
+      <mxGeometry x="570" y="400" width="78" height="53" as="geometry" />
+    </mxCell>
+
+    <!-- R7: Stub Router — bottom far right -->
+    <mxCell id="R7" value="" style="shape=mxgraph.cisco.routers.router;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;" vertex="1" parent="1">
+      <mxGeometry x="840" y="400" width="78" height="53" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- DEVICE LABELS (separate text cells — Empty Side Rule)       -->
+    <!-- ============================================================ -->
+
+    <!-- R1: neighbors below-left (R2), below-right (R3, R4 to the right)
+         Connections exit: bottom-left (R2), bottom-right (R3), right (R4)
+         → place label LEFT of icon -->
+    <mxCell id="R1_lbl" value="R1&#10;Hub / ABR&#10;10.1.1.1/32" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" vertex="1" parent="1">
+      <mxGeometry x="375" y="133" width="105" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- R4: only neighbor is R1 to the LEFT → place label RIGHT -->
+    <mxCell id="R4_lbl" value="R4&#10;NSSA Router / ASBR&#10;10.4.4.4/32&#10;Lo100: 172.16.4.0/24" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" vertex="1" parent="1">
+      <mxGeometry x="843" y="133" width="130" height="75" as="geometry" />
+    </mxCell>
+
+    <!-- R2: neighbors R1 (upper-right), R3 (right) → place label LEFT -->
+    <mxCell id="R2_lbl" value="R2&#10;Backbone Router&#10;10.2.2.2/32" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" vertex="1" parent="1">
+      <mxGeometry x="85" y="393" width="108" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- R3: neighbors on both sides (R1 upper, R2 left, R7 right) → place label LEFT -->
+    <mxCell id="R3_lbl" value="R3&#10;Branch Router / ABR&#10;10.3.3.3/32" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" vertex="1" parent="1">
+      <mxGeometry x="455" y="393" width="110" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- R7: only neighbor R3 is to the LEFT → place label RIGHT -->
+    <mxCell id="R7_lbl" value="R7&#10;Stub Router&#10;10.7.7.7/32" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1" vertex="1" parent="1">
+      <mxGeometry x="923" y="393" width="100" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- CONNECTION LINES (white, strokeWidth=2, endArrow=none)      -->
+    <!-- ============================================================ -->
+
+    <!-- L1: R1 Fa1/0 ↔ R2 Fa0/0 — 10.12.0.0/30 — Area 0 -->
+    <mxCell id="link_R1_R2" value="" style="endArrow=none;html=1;strokeWidth=2;strokeColor=#FFFFFF;fillColor=#f5f5f5;" edge="1" parent="1" source="R1" target="R2">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="link_R1_R2_lbl" value="Fa1/0 — Fa0/0&#10;10.12.0.0/30" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link_R1_R2">
+      <mxGeometry relative="0.5" as="geometry"><mxPoint as="offset" x="-20" y="0" /></mxGeometry>
+    </mxCell>
+
+    <!-- L3: R1 Fa1/1 ↔ R3 Fa0/1 — 10.13.0.0/30 — Area 0 -->
+    <mxCell id="link_R1_R3" value="" style="endArrow=none;html=1;strokeWidth=2;strokeColor=#FFFFFF;fillColor=#f5f5f5;" edge="1" parent="1" source="R1" target="R3">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="link_R1_R3_lbl" value="Fa1/1 — Fa0/1&#10;10.13.0.0/30" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link_R1_R3">
+      <mxGeometry relative="0.5" as="geometry"><mxPoint as="offset" x="20" y="0" /></mxGeometry>
+    </mxCell>
+
+    <!-- L2: R2 Fa0/1 ↔ R3 Fa0/0 — 10.23.0.0/30 — Area 1 -->
+    <mxCell id="link_R2_R3" value="" style="endArrow=none;html=1;strokeWidth=2;strokeColor=#FFFFFF;fillColor=#f5f5f5;" edge="1" parent="1" source="R2" target="R3">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="link_R2_R3_lbl" value="Fa0/1 — Fa0/0&#10;10.23.0.0/30" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link_R2_R3">
+      <mxGeometry relative="0.5" as="geometry"><mxPoint as="offset" x="0" y="-20" /></mxGeometry>
+    </mxCell>
+
+    <!-- L4: R1 Fa0/0 ↔ R4 Fa0/0 — 10.14.0.0/30 — Area 14 (NSSA) -->
+    <mxCell id="link_R1_R4" value="" style="endArrow=none;html=1;strokeWidth=2;strokeColor=#FFFFFF;fillColor=#f5f5f5;" edge="1" parent="1" source="R1" target="R4">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="link_R1_R4_lbl" value="Fa0/0 — Fa0/0&#10;10.14.0.0/30" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link_R1_R4">
+      <mxGeometry relative="0.5" as="geometry"><mxPoint as="offset" x="0" y="-20" /></mxGeometry>
+    </mxCell>
+
+    <!-- L6: R3 Fa1/1 ↔ R7 Fa0/0 — 10.37.0.0/30 — Area 2 (Totally Stubby) -->
+    <mxCell id="link_R3_R7" value="" style="endArrow=none;html=1;strokeWidth=2;strokeColor=#FFFFFF;fillColor=#f5f5f5;" edge="1" parent="1" source="R3" target="R7">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="link_R3_R7_lbl" value="Fa1/1 — Fa0/0&#10;10.37.0.0/30" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;fillColor=none;strokeColor=none;" vertex="1" connectable="0" parent="link_R3_R7">
+      <mxGeometry relative="0.5" as="geometry"><mxPoint as="offset" x="0" y="-20" /></mxGeometry>
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- IP LAST-OCTET LABELS (standalone, near interface endpoints) -->
+    <!-- ============================================================ -->
+
+    <!-- L1 R1-R2: R1 Fa1/0 → 10.12.0.1 → .1 (near R1 lower-left) -->
+    <mxCell id="L1_R1_octet" value=".1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;" vertex="1" connectable="0" parent="1">
+      <mxGeometry x="460" y="225" as="geometry" />
+    </mxCell>
+    <!-- L1 R1-R2: R2 Fa0/0 → 10.12.0.2 → .2 (near R2 upper) -->
+    <mxCell id="L1_R2_octet" value=".2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;" vertex="1" connectable="0" parent="1">
+      <mxGeometry x="256" y="368" as="geometry" />
+    </mxCell>
+
+    <!-- L3 R1-R3: R1 Fa1/1 → 10.13.0.1 → .1 (near R1 lower-right) -->
+    <mxCell id="L3_R1_octet" value=".1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;" vertex="1" connectable="0" parent="1">
+      <mxGeometry x="560" y="225" as="geometry" />
+    </mxCell>
+    <!-- L3 R1-R3: R3 Fa0/1 → 10.13.0.2 → .2 (near R3 upper-left) -->
+    <mxCell id="L3_R3_octet" value=".2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;" vertex="1" connectable="0" parent="1">
+      <mxGeometry x="583" y="368" as="geometry" />
+    </mxCell>
+
+    <!-- L2 R2-R3: R2 Fa0/1 → 10.23.0.1 → .1 (near R2 right) -->
+    <mxCell id="L2_R2_octet" value=".1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;" vertex="1" connectable="0" parent="1">
+      <mxGeometry x="308" y="415" as="geometry" />
+    </mxCell>
+    <!-- L2 R2-R3: R3 Fa0/0 → 10.23.0.2 → .2 (near R3 left) -->
+    <mxCell id="L2_R3_octet" value=".2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;" vertex="1" connectable="0" parent="1">
+      <mxGeometry x="500" y="415" as="geometry" />
+    </mxCell>
+
+    <!-- L4 R1-R4: R1 Fa0/0 → 10.14.0.1 → .1 (near R1 right) -->
+    <mxCell id="L4_R1_octet" value=".1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;" vertex="1" connectable="0" parent="1">
+      <mxGeometry x="598" y="155" as="geometry" />
+    </mxCell>
+    <!-- L4 R1-R4: R4 Fa0/0 → 10.14.0.2 → .2 (near R4 left) -->
+    <mxCell id="L4_R4_octet" value=".2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;" vertex="1" connectable="0" parent="1">
+      <mxGeometry x="750" y="155" as="geometry" />
+    </mxCell>
+
+    <!-- L6 R3-R7: R3 Fa1/1 → 10.37.0.1 → .1 (near R3 right) -->
+    <mxCell id="L6_R3_octet" value=".1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;" vertex="1" connectable="0" parent="1">
+      <mxGeometry x="685" y="415" as="geometry" />
+    </mxCell>
+    <!-- L6 R3-R7: R7 Fa0/0 → 10.37.0.2 → .2 (near R7 left) -->
+    <mxCell id="L6_R7_octet" value=".2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#FFFFFF;" vertex="1" connectable="0" parent="1">
+      <mxGeometry x="808" y="415" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- LEGEND BOX (bottom-right, black fill, white text)           -->
+    <!-- ============================================================ -->
+    <mxCell id="legend" value="Legend&#10;--- Physical Link&#10;&#10;OSPF Process ID: 1&#10;[Blue]   Area 0 (Backbone)&#10;[Green]  Area 1 (Normal)&#10;[Orange] Area 2 (Totally Stubby)&#10;[Purple] Area 14 (NSSA)&#10;&#10;R1 = ABR: Area 0 / Area 14&#10;R3 = ABR: Area 0 / Area 1 / Area 2&#10;R4 = ASBR (Type 7 originator)&#10;Lo100: 172.16.4.0/24" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#FFFFFF;fontColor=#FFFFFF;fontSize=10;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" vertex="1" parent="1">
+      <mxGeometry x="940" y="540" width="210" height="220" as="geometry" />
+    </mxCell>
+
+  </root>
+</mxGraphModel>
